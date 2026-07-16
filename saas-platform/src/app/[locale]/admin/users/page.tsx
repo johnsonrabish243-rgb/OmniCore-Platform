@@ -52,27 +52,62 @@ export default function AdminUsersPage() {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  async function createUser() {
-    if (!email || !password) { showToast(t("emailPasswordRequired") || "Email and password required", "warning"); return; }
-    try {
-      const res = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, firstName, lastName, role }),
-      });
-      const bodyRes = await res.json();
-      if (!res.ok) {
-        showToast(bodyRes.error || t("createUserFailed") || "Failed to create user", "error");
-        return;
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  function openEdit(u: UserData) {
+    setEditingId(u.id);
+    setEmail(u.email);
+    setFirstName(u.firstName || "");
+    setLastName(u.lastName || "");
+    setRole(u.role || "EMPLOYEE");
+    setShowDialog(true);
+  }
+
+  async function saveUser() {
+    // If editingId is set, perform PATCH; otherwise create
+    if (editingId) {
+      try {
+        const res = await fetch(`/api/admin/users/${editingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ firstName: firstName || undefined, lastName: lastName || undefined, role: role || undefined }),
+        });
+        const bodyRes = await res.json();
+        if (!res.ok) {
+          showToast(bodyRes.error || t("updateUserFailed") || "Failed to update user", "error");
+          return;
+        }
+        showToast(t("userUpdated") || "User updated", "success");
+        setShowDialog(false);
+        setEditingId(null);
+        setEmail(""); setPassword(""); setFirstName(""); setLastName(""); setRole("EMPLOYEE");
+        await fetchUsers();
+        await fetch("/api/admin/audit-logs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "update_user", entity: "user", entityId: editingId, description: `Updated user ${bodyRes.user?.email || editingId}` }) });
+      } catch (e) {
+        showToast(t("updateUserFailed") || "Failed to update user", "error");
       }
-      showToast(t("userCreated") || "User created", "success");
-      setShowDialog(false);
-      setEmail(""); setPassword(""); setFirstName(""); setLastName(""); setRole("EMPLOYEE");
-      await fetchUsers();
-      // create audit log
-      await fetch("/api/admin/audit-logs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create_user", entity: "user", entityId: bodyRes.user?.id, description: `Created user ${bodyRes.user?.email}` }) });
-    } catch (e) {
-      showToast(t("createUserFailed") || "Failed to create user", "error");
+    } else {
+      if (!email || !password) { showToast(t("emailPasswordRequired") || "Email and password required", "warning"); return; }
+      try {
+        const res = await fetch("/api/admin/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, firstName, lastName, role }),
+        });
+        const bodyRes = await res.json();
+        if (!res.ok) {
+          showToast(bodyRes.error || t("createUserFailed") || "Failed to create user", "error");
+          return;
+        }
+        showToast(t("userCreated") || "User created", "success");
+        setShowDialog(false);
+        setEmail(""); setPassword(""); setFirstName(""); setLastName(""); setRole("EMPLOYEE");
+        await fetchUsers();
+        // create audit log
+        await fetch("/api/admin/audit-logs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create_user", entity: "user", entityId: bodyRes.user?.id, description: `Created user ${bodyRes.user?.email}` }) });
+      } catch (e) {
+        showToast(t("createUserFailed") || "Failed to create user", "error");
+      }
     }
   }
 
@@ -173,13 +208,16 @@ export default function AdminUsersPage() {
                     <td className="p-4 text-muted-foreground text-xs">{new Date(user.createdAt).toLocaleDateString()}</td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon-sm" onClick={() => toggleActive(user)}>
-                          {user.isActive ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                                        <Button variant="ghost" size="icon-sm" onClick={() => openEdit(user)} title={t("edit")}>
+                                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon-sm" onClick={() => deleteUser(user)}>
-                          <Trash className="h-4 w-4" />
+                                        <Button variant="ghost" size="icon-sm" onClick={() => toggleActive(user)}>
+                                          {user.isActive ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
                         </Button>
-                      </div>
+                                        <Button variant="ghost" size="icon-sm" onClick={() => deleteUser(user)}>
+                                          <Trash className="h-4 w-4" />
+                                        </Button>
+                                      </div>
                     </td>
                   </tr>
                 ))}
@@ -190,10 +228,10 @@ export default function AdminUsersPage() {
       </Card>
 
       {/* Add User Dialog */}
-      <Dialog open={showDialog} onOpenChange={(v) => setShowDialog(v)}>
+      <Dialog open={showDialog} onOpenChange={(v) => { setShowDialog(v); if (!v) setEditingId(null); }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{t("addUser")}</DialogTitle>
+              <DialogTitle>{editingId ? t("editUser") : t("addUser")}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-2">
             <Input placeholder={t("emailPlaceholder")} value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -215,8 +253,8 @@ export default function AdminUsersPage() {
             </Select>
           </div>
           <DialogFooter className="mt-4 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setShowDialog(false)}>{t("cancel")}</Button>
-            <Button onClick={createUser}>{t("create")}</Button>
+                <Button variant="ghost" onClick={() => { setShowDialog(false); setEditingId(null); }}>{t("cancel")}</Button>
+                <Button onClick={saveUser}>{editingId ? t("save") : t("create")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
