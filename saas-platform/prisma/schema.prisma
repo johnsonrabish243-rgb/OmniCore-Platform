@@ -1,0 +1,661 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  OWNER
+  MANAGER
+  SUPERVISOR
+  HR
+  FINANCE
+  SALES
+  INVENTORY
+  TEACHER
+  STUDENT
+  CASHIER
+  EMPLOYEE
+  GUEST
+  OBSERVER
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+  TRIALING
+}
+
+model User {
+  id              String         @id @default(cuid())
+  email           String         @unique
+  emailVerified   DateTime?
+  passwordHash    String?
+  firstName       String?
+  lastName        String?
+  bio             String?
+  phone           String?
+  address         String?
+  timezone        String         @default("UTC")
+  language        String         @default("fr")
+  country         String?
+  currency        String         @default("EUR")
+  jobTitle        String?
+  organization    String?
+  department      String?
+  emergencyContact String?
+  avatarUrl       String?
+  coverUrl        String?
+  onlineStatus    String         @default("offline")
+  mfaEnabled      Boolean        @default(false)
+  mfaSecret       String?
+  twoFactorBackupCodes String?
+  role            UserRole       @default(EMPLOYEE)
+  isActive        Boolean        @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  accounts       Account[]
+  sessions       Session[]
+  memberships    OrganizationMember[]
+  loginHistory   LoginHistory[]
+  devices        Device[]
+  apiKeys        ApiKey[]
+  notifications  Notification[]
+  createdContacts Contact[]  @relation("ContactCreatedBy")
+  assignedLeads  Lead[]      @relation("LeadAssignedTo")
+  createdLeads   Lead[]      @relation("LeadCreatedBy")
+  assignedDeals  Deal[]      @relation("DealAssignedTo")
+  createdDeals   Deal[]      @relation("DealCreatedBy")
+
+  @@map("users")
+}
+
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  refreshToken      String?
+  accessToken       String?
+  expiresAt         Int?
+  tokenType         String?
+  scope             String?
+  idToken           String?
+  sessionState      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  userId        String
+  sessionToken  String   @unique
+  expiresAt     DateTime
+  ipAddress     String?
+  userAgent     String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model LoginHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  ipAddress String?
+  userAgent String?
+  location  String?
+  device    String?
+  success   Boolean  @default(true)
+  method    String   @default("password")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("login_history")
+}
+
+model Device {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String?
+  type         String?
+  browser      String?
+  os           String?
+  ipAddress    String?
+  isTrusted    Boolean  @default(false)
+  lastUsedAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("devices")
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logoUrl     String?
+  website     String?
+  description String?
+  industry    String?
+  size        String?
+  tier        SubscriptionTier @default(FREE)
+  settings    Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members        OrganizationMember[]
+  workspaces     Workspace[]
+  billing        Billing?
+  contacts       Contact[]
+  leads          Lead[]
+  deals          Deal[]
+  webhooks       Webhook[]
+  classes        Class[]
+  courses        Course[]
+  students       Student[]
+  teachers       Teacher[]
+  patients       Patient[]
+  appointments   Appointment[]
+  staffMembers   StaffMember[]
+  medicines      Medicine[]
+  stockMovements  StockMovement[]
+  products       Product[]
+  orders         Order[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  role           UserRole @default(EMPLOYEE)
+  isOwner        Boolean  @default(false)
+  joinedAt       DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("organization_members")
+}
+
+model Workspace {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String
+  description    String?
+  type           String?
+  settings       Json?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, slug])
+  @@map("workspaces")
+}
+
+model Billing {
+  id              String             @id @default(cuid())
+  organizationId  String             @unique
+  stripeCustomerId String?
+  stripeSubscriptionId String?
+  tier            SubscriptionTier   @default(FREE)
+  status          SubscriptionStatus @default(TRIALING)
+  trialEndsAt     DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd   Boolean        @default(false)
+  taxId           String?
+  billingEmail    String?
+  billingAddress  String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoices     Invoice[]
+
+  @@map("billing")
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  billingId   String
+  amount      Decimal  @default(0)
+  currency    String   @default("EUR")
+  status      String   @default("pending")
+  description String?
+  paidAt      DateTime?
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  billing Billing @relation(fields: [billingId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  key         String   @unique
+  permissions String?
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum DealStage {
+  LEAD
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+model Contact {
+  id             String   @id @default(cuid())
+  organizationId String
+  firstName      String?
+  lastName       String?
+  email          String?
+  phone          String?
+  jobTitle       String?
+  company        String?
+  notes          String?
+  source         String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("ContactCreatedBy", fields: [createdById], references: [id])
+  deals        Deal[]
+
+  @@map("contacts")
+}
+
+model Lead {
+  id             String   @id @default(cuid())
+  organizationId String
+  firstName      String?
+  lastName       String?
+  email          String?
+  phone          String?
+  company        String?
+  jobTitle       String?
+  source         String?
+  status         String   @default("new")
+  score          Int      @default(0)
+  notes          String?
+  assignedToId   String?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedTo   User?        @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+  createdBy    User?        @relation("LeadCreatedBy", fields: [createdById], references: [id])
+
+  @@map("leads")
+}
+
+model Deal {
+  id             String    @id @default(cuid())
+  organizationId String
+  contactId      String?
+  title          String
+  value          Decimal   @default(0)
+  currency       String    @default("EUR")
+  stage          DealStage @default(LEAD)
+  probability    Int       @default(0)
+  expectedCloseDate DateTime?
+  notes          String?
+  source         String?
+  assignedToId   String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contact      Contact?     @relation(fields: [contactId], references: [id])
+  assignedTo   User?        @relation("DealAssignedTo", fields: [assignedToId], references: [id])
+  createdBy    User?        @relation("DealCreatedBy", fields: [createdById], references: [id])
+
+  @@map("deals")
+}
+
+model Webhook {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  url            String
+  events         Json     @default("[]")
+  secret         String?
+  isActive       Boolean  @default(true)
+  lastTriggeredAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries   WebhookDelivery[]
+
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id           String   @id @default(cuid())
+  webhookId    String
+  event        String
+  url          String
+  status       String   @default("pending")
+  statusCode   Int?
+  requestBody  String?
+  responseBody String?
+  duration     Int?
+  createdAt    DateTime @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@map("webhook_deliveries")
+}
+
+// ──────────────────────────────────────────────
+// Education Module
+// ──────────────────────────────────────────────
+
+model Class {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  level          String?
+  room           String?
+  schedule       String?
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("classes")
+}
+
+model Course {
+  id             String   @id @default(cuid())
+  organizationId String
+  classId        String?
+  name           String
+  code           String?
+  teacherName    String?
+  schedule       String?
+  room           String?
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("courses")
+}
+
+model Student {
+  id             String   @id @default(cuid())
+  organizationId String
+  classId        String?
+  firstName      String?
+  lastName       String?
+  email          String?
+  grade          String?
+  attendance     Int      @default(0)
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("students")
+}
+
+model Teacher {
+  id             String   @id @default(cuid())
+  organizationId String
+  firstName      String?
+  lastName       String?
+  email          String?
+  subject        String?
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("teachers")
+}
+
+// ──────────────────────────────────────────────
+// Healthcare Module
+// ──────────────────────────────────────────────
+
+model Patient {
+  id             String   @id @default(cuid())
+  organizationId String
+  firstName      String?
+  lastName       String?
+  email          String?
+  phone          String?
+  age            Int      @default(0)
+  gender         String?
+  bloodType      String?
+  condition      String?
+  status         String   @default("stable")
+  lastVisit      String?
+  doctor         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("patients")
+}
+
+model Appointment {
+  id             String   @id @default(cuid())
+  organizationId String
+  patientId      String?
+  patientName    String?
+  doctor         String?
+  date           String?
+  time           String?
+  type           String?
+  status         String   @default("scheduled")
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("appointments")
+}
+
+model StaffMember {
+  id             String   @id @default(cuid())
+  organizationId String
+  firstName      String?
+  lastName       String?
+  email          String?
+  role           String?
+  department     String?
+  status         String   @default("active")
+  patientsCount  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("staff_members")
+}
+
+// ──────────────────────────────────────────────
+// Pharmacy Module
+// ──────────────────────────────────────────────
+
+model Medicine {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  dosage         String?
+  category       String?
+  stock          Int      @default(0)
+  price          Float    @default(0)
+  expiryDate     String?
+  supplier       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("medicines")
+}
+
+model StockMovement {
+  id             String   @id @default(cuid())
+  organizationId String
+  medicineId     String?
+  type           String   @default("in") // "in" or "out"
+  quantity       Int      @default(0)
+  user           String?
+  note           String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("stock_movements")
+}
+
+// ──────────────────────────────────────────────
+// Commerce Module
+// ──────────────────────────────────────────────
+
+model Product {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  sku            String?
+  description    String?
+  category       String?
+  price          Float    @default(0)
+  stock          Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orderItems   OrderItem[]
+
+  @@map("products")
+}
+
+model Order {
+  id             String   @id @default(cuid())
+  organizationId String
+  orderNumber    String   @unique
+  customerName   String?
+  customerEmail  String?
+  status         String   @default("pending")
+  total          Float    @default(0)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items        OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String?
+  name      String
+  quantity  Int      @default(1)
+  price     Float    @default(0)
+  createdAt DateTime @default(now())
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  entity      String?
+  entityId    String?
+  description String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@map("audit_logs")
+}

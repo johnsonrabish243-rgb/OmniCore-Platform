@@ -1,0 +1,127 @@
+"use client";
+
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/routing";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Mail, Sparkles, ArrowLeft, CheckCircle } from "lucide-react";
+
+export default function MagicLinkPage() {
+  const t = useTranslations("auth");
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    // Simulate sending magic link
+    await new Promise((r) => setTimeout(r, 1500));
+    setSent(true);
+    setIsLoading(false);
+  };
+
+  if (sent) {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="w-full max-w-[440px] animate-fade-in-up text-center">
+          <div className="flex justify-center mb-6">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+              <CheckCircle className="h-8 w-8 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight mb-2">Lien magique envoyé !</h1>
+          <p className="text-muted-foreground mb-6">
+            Un lien de connexion a été envoyé à <strong>{email}</strong>.
+            Cliquez sur le lien pour vous connecter instantanément.
+          </p>
+          <Link href="/login">
+            <Button variant="outline" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Retour à la connexion
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 h-[400px] w-[400px] rounded-full bg-primary/10 blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-[440px] animate-fade-in-up">
+        <div className="flex flex-col items-center mb-8">
+          <div className="flex h-14 w-14 items-center justify-center rounded-[16px] bg-gradient-to-br from-primary to-primary-600 shadow-lg mb-4">
+            <span className="text-2xl font-bold text-white">N</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Connexion sans mot de passe</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Recevez un lien magique par email pour vous connecter
+          </p>
+        </div>
+
+        <Card className="border-border/50 shadow-xl">
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="email">
+                  {t("email")}
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder={t("emailPlaceholder")}
+                    className="pl-9"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full h-11 gap-2" loading={isLoading}>
+                <Sparkles className="h-4 w-4" />
+                {t("sendMagicLink")}
+              </Button>
+            </form>
+
+            <div className="mt-6">
+              <div className="relative mb-4">
+                <Separator />
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                  {t("orContinueWith")}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" className="gap-2 h-10">Google</Button>
+                <Button variant="outline" className="gap-2 h-10">GitHub</Button>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center">
+              <Link
+                href="/login"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span className="inline-flex items-center gap-1">
+                  <ArrowLeft className="h-4 w-4" />
+                  {t("signIn")}
+                </span>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

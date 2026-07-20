@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { showToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import {
   Users,
   UserPlus,
@@ -33,23 +34,53 @@ export default function HRPage() {
   const [jobTitle, setJobTitle] = useState("");
   const [department, setDepartment] = useState("");
 
-  async function fetchEmployees() {
+  // New: orgs & pagination
+  const [orgs, setOrgs] = useState<any[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+
+  async function fetchSessionOrgs() {
+    try {
+      const res = await fetch("/api/auth/session");
+      if (!res.ok) return;
+      const body = await res.json();
+      const orgs = body.user?.organizations || [];
+      setOrgs(orgs);
+      setSelectedOrgId(orgs[0]?.id || null);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  async function fetchEmployees(p = page, orgId = selectedOrgId) {
     setLoading(true);
     try {
-      const res = await fetch("/api/hr/employees");
+      const url = new URL(window.location.origin + "/api/hr/employees");
+      url.searchParams.set("page", String(p));
+      url.searchParams.set("limit", String(limit));
+      if (orgId) url.searchParams.set("organizationId", orgId);
+
+      const res = await fetch(url.toString());
       if (!res.ok) { showToast(t("fetchEmployeesFailed") || "Failed to load employees", "error"); setEmployees([]); return; }
       const body = await res.json();
       setEmployees(body.employees || []);
+      setTotal(body.total || 0);
+      setPage(body.page || p);
     } catch (e) {
       showToast(t("fetchEmployeesFailed") || "Failed to load employees", "error");
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { fetchEmployees(); }, []);
+  useEffect(() => { fetchSessionOrgs(); }, []);
+  useEffect(() => { fetchEmployees(1, selectedOrgId); }, [selectedOrgId]);
 
   function openAdd() {
     setEditingId(null);
     setEmail(""); setFirstName(""); setLastName(""); setJobTitle(""); setDepartment("");
+    setInviteLink(null);
     setShowDialog(true);
   }
 
@@ -61,6 +92,10 @@ export default function HRPage() {
     setJobTitle(emp.role || "");
     setDepartment(emp.department || "");
     setShowDialog(true);
+  }
+
+  function isValidEmail(e: string) {
+    return /\S+@\S+\.\S+/.test(e);
   }
 
   async function saveEmployee() {
@@ -75,14 +110,28 @@ export default function HRPage() {
       } catch (e) { showToast(t("updateEmployeeFailed") || "Failed to update employee", "error"); }
     } else {
       if (!email) { showToast(t("emailRequired") || "Email required", "warning"); return; }
+      if (!isValidEmail(email)) { showToast(t("invalidEmail") || "Invalid email", "warning"); return; }
       try {
-        const res = await fetch("/api/hr/employees", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, firstName, lastName, jobTitle, department }) });
+        const res = await fetch("/api/hr/employees", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, firstName, lastName, jobTitle, department, organizationId: selectedOrgId }) });
         if (!res.ok) { const b = await res.json(); showToast(b.error || t("createEmployeeFailed") || "Failed to create employee", "error"); return; }
+        const body = await res.json();
         showToast(t("employeeCreated") || "Employee created", "success");
         setShowDialog(false); setEmail(""); setFirstName(""); setLastName(""); setJobTitle(""); setDepartment("");
-        await fetchEmployees();
-        const body = await res.json();
+        await fetchEmployees(1, selectedOrgId);
         await fetch("/api/admin/audit-logs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create_employee", entity: "employee", entityId: body.employee?.id, description: `Created employee ${email}` }) });
+
+        // If invite token returned in dev, surface it so admin can copy/send
+        if (body.invite?.resetToken) {
+          try {
+            const token = body.invite.resetToken;
+            const link = `${window.location.origin}/forgot-password?token=${token}`;
+            setInviteLink(link);
+            // Also print to console for server logs parity
+            console.log("Invite link:", link);
+          } catch {
+            // ignore
+          }
+        }
       } catch (e) { showToast(t("createEmployeeFailed") || "Failed to create employee", "error"); }
     }
   }
@@ -99,7 +148,7 @@ export default function HRPage() {
   }
 
   const stats = [
-    { label: t("employees"), value: `${employees.length}`, change: "+0", icon: Users, color: "bg-primary/10 text-primary" },
+    { label: t("employees"), value: `${total}`, change: "+0", icon: Users, color: "bg-primary/10 text-primary" },
     { label: t("present"), value: "—", change: "", icon: UserCheck, color: "bg-emerald-50 text-emerald-600" },
     { label: t("onLeave"), value: "—", change: "", icon: Calendar, color: "bg-amber-50 text-amber-600" },
     { label: t("departments"), value: "—", change: "", icon: Briefcase, color: "bg-purple-50 text-purple-600" },
@@ -153,9 +202,19 @@ export default function HRPage() {
                 <CardTitle>{t("employeesList")}</CardTitle>
                 <CardDescription>{t("employeesListDesc")}</CardDescription>
               </div>
-              <div className="relative w-48">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder={t("search")} className="pl-8 h-9" />
+              <div className="flex items-center gap-3">
+                <div className="relative w-48">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder={t("search")} className="pl-8 h-9" />
+                </div>
+                <Select onValueChange={(v:any) => setSelectedOrgId(v)} value={selectedOrgId || undefined}>
+                  <SelectTrigger className="w-48 h-9"><SelectValue placeholder={t("selectOrganization") as any || "Organization"} /></SelectTrigger>
+                  <SelectContent>
+                    {orgs.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>
@@ -187,6 +246,17 @@ export default function HRPage() {
                 ))
               )}
             </div>
+
+            {/* Pagination */}
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">{t("showing")} {employees.length} / {total}</div>
+              <div className="flex items-center gap-2">
+                <Button disabled={page <= 1} onClick={() => { setPage((p) => Math.max(1, p - 1)); fetchEmployees(page - 1, selectedOrgId); }} variant="outline">{t("prev")}</Button>
+                <div className="px-2">{page}</div>
+                <Button disabled={page * limit >= total} onClick={() => { setPage((p) => p + 1); fetchEmployees(page + 1, selectedOrgId); }} variant="outline">{t("next")}</Button>
+              </div>
+            </div>
+
           </CardContent>
         </Card>
 
@@ -216,14 +286,39 @@ export default function HRPage() {
             <DialogTitle>{editingId ? t("editEmployee") : t("newEmployee")}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-2">
-            <Input placeholder={t("auth.emailPlaceholder") as any || "Email"} value={email} onChange={(e) => setEmail(e.target.value)} />
-            {!editingId && <Input placeholder={t("auth.passwordPlaceholder") as any || "Password"} type="password" />}
+            <Input placeholder={t("emailPlaceholder") || "Email"} value={email} onChange={(e) => setEmail(e.target.value)} />
+            {!editingId && <Input placeholder={t("passwordPlaceholder") || "Password"} type="password" />}
             <div className="grid grid-cols-2 gap-2">
-              <Input placeholder={t("common.firstName") as any || "First"} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-              <Input placeholder={t("common.lastName") as any || "Last"} value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              <Input placeholder={t("firstName") || "First"} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              <Input placeholder={t("lastName") || "Last"} value={lastName} onChange={(e) => setLastName(e.target.value)} />
             </div>
             <Input placeholder="Job title" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
             <Input placeholder="Department" value={department} onChange={(e) => setDepartment(e.target.value)} />
+
+            {!editingId && (
+              <div>
+                <label className="text-sm font-medium">{t("selectOrganization")}</label>
+                <Select onValueChange={(v:any) => setSelectedOrgId(v)} value={selectedOrgId || undefined}>
+                  <SelectTrigger className="w-full h-9"><SelectValue placeholder={t("selectOrganization") as any || "Organization"} /></SelectTrigger>
+                  <SelectContent>
+                    {orgs.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {inviteLink && (
+              <div className="p-2 rounded-md bg-slate-50 border border-border/50">
+                <div className="text-sm">{t("inviteLinkAvailable")}</div>
+                <div className="text-xs text-muted-foreground break-all">{inviteLink}</div>
+                <div className="mt-2">
+                  <Button onClick={() => { navigator.clipboard.writeText(inviteLink || ""); showToast(t("copied") || "Copied", "success"); }}>{t("copyLink")}</Button>
+                </div>
+              </div>
+            )}
+
           </div>
           <DialogFooter className="mt-4 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => { setShowDialog(false); setEditingId(null); }}>{t("cancel")}</Button>

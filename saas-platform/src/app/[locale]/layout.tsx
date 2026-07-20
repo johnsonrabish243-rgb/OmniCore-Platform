@@ -1,0 +1,143 @@
+import { getMessages, getTranslations } from "next-intl/server";
+import { NextIntlClientProvider } from "next-intl";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "sonner";
+import { AppShell } from "@/components/app-shell";
+import { InitialLoading } from "@/components/initial-loading";
+import { notFound } from "next/navigation";
+import { routing } from "@/i18n/routing";
+import { headers } from "next/headers";
+
+// Auth pages that should NOT show the sidebar/AppShell
+const AUTH_PATHS = [
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/magic-link",
+];
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "app" });
+
+  const title = `${t("name")} | ${t("tagline")}`;
+  const description = locale === "fr" 
+    ? "OmniCore est une plateforme ERP cloud moderne basée à Kalemie, Tanganyika, RDC. Gérez RH, Finance, Commerce, Pharmacie, Éducation et plus."
+    : locale === "sw"
+    ? "OmniCore ni jukwaa la kisasa la ERP linalotokana na Kalemie, Tanganyika, DRC. Simamia HR, Fedha, Biashara, Dawa, Elimu na zaidi."
+    : "OmniCore is a modern cloud ERP platform based in Kalemie, Tanganyika, DRC. Manage HR, Finance, Commerce, Pharmacy, Education and more.";
+
+  return {
+    title,
+    description,
+    keywords: ["ERP", "SaaS", "OmniCore", "Kalemie", "Tanganyika", "RDC", "gestion d'entreprise", "cloud", "RH", "finance", "commerce"],
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      locale: locale === "fr" ? "fr_FR" : locale === "sw" ? "sw_KE" : "en_US",
+      siteName: "OmniCore",
+      url: `https://omnicore.cd/${locale}`,
+      images: [
+        {
+          url: "/omnicore-logo.png",
+          width: 120,
+          height: 120,
+          alt: "OmniCore Logo",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/omnicore-logo.png"],
+    },
+    alternates: {
+      canonical: `https://omnicore.cd/${locale}`,
+      languages: {
+        fr: "https://omnicore.cd/fr",
+        en: "https://omnicore.cd/en",
+        sw: "https://omnicore.cd/sw",
+      },
+    },
+  };
+}
+
+/**
+ * Shared providers needed by both auth pages (no sidebar) and protected pages (with sidebar).
+ */
+function Providers({ children, locale, messages }: { children: React.ReactNode; locale: string; messages: Record<string, any> }) {
+  return (
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+    >
+      <NextIntlClientProvider locale={locale} messages={messages} timeZone="Europe/Paris">
+        {children}
+        <Toaster
+          position="bottom-right"
+          richColors
+          closeButton
+          theme="system"
+        />
+      </NextIntlClientProvider>
+    </ThemeProvider>
+  );
+}
+
+export default async function LocaleLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+
+  // Validate locale
+  if (!routing.locales.includes(locale as any)) {
+    notFound();
+  }
+
+  const messages = await getMessages();
+
+  // Determine if this is an auth page (login, signup, etc.) or the landing page
+  // These should NOT show the sidebar/AppShell
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || "";
+
+  // Strip locale prefix for comparison
+  let path = pathname;
+  for (const l of routing.locales) {
+    if (pathname === `/${l}` || pathname.startsWith(`/${l}/`)) {
+      path = pathname.slice(l.length + 1) || "/";
+      break;
+    }
+  }
+
+  const isAuthPage = AUTH_PATHS.some((p) => path === p || path.startsWith(p + "/"));
+  const isLandingPage = path === "/";
+
+  // Wrap both auth/landing pages and dashboard pages with InitialLoading
+  if (isAuthPage || isLandingPage) {
+    return (
+      <Providers locale={locale} messages={messages}>
+        <InitialLoading>
+          {children}
+        </InitialLoading>
+      </Providers>
+    );
+  }
+
+  return (
+    <Providers locale={locale} messages={messages}>
+      <InitialLoading>
+        <AppShell>
+          {children}
+        </AppShell>
+      </InitialLoading>
+    </Providers>
+  );
+}
