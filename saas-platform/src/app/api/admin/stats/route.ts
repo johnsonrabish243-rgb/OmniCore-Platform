@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -9,100 +9,75 @@ export async function GET() {
   }
 
   try {
-    // System health checks — simulate service status with DB connectivity
+    const supabase = await createClient();
+
+    // System health — check DB connectivity
     let dbStatus = "healthy";
     let apiLatency = 0;
     try {
       const start = Date.now();
-      await prisma.$queryRaw`SELECT 1`;
+      const { error } = await supabase.from("users").select("id", { count: "exact", head: true });
       apiLatency = Date.now() - start;
+      if (error) dbStatus = "degraded";
     } catch {
       dbStatus = "degraded";
     }
 
+    // Fetch counts
     const [
-      totalUsers,
-      totalOrganizations,
-      totalWorkspaces,
-      activeUsers,
-      totalEmployees,
-      recentUsers,
-      totalOrders,
-      totalProducts,
-      totalMedicines,
-      totalPatients,
-      totalStudents,
-      totalTeachers,
-      recentLogins,
-      recentActivity,
+      { count: totalUsers },
+      { count: totalOrganizations },
+      { count: activeWorkspaces },
+      { count: activeUsers },
+      { count: totalProducts },
+      { count: totalOrders },
     ] = await Promise.all([
-      prisma.user.count(),
-      prisma.organization.count(),
-      prisma.workspace.count({ where: { isActive: true } }),
-      prisma.user.count({ where: { isActive: true } }),
-      prisma.organizationMember.count({ where: { role: "EMPLOYEE" } }),
-      prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: 5, select: { id: true, email: true, firstName: true, lastName: true, role: true, createdAt: true } }),
-      prisma.order.count(),
-      prisma.product.count(),
-      prisma.medicine.count(),
-      prisma.patient.count(),
-      prisma.student.count(),
-      prisma.teacher.count(),
-      prisma.loginHistory.findMany({ orderBy: { createdAt: "desc" }, take: 5, include: { user: { select: { firstName: true, lastName: true, email: true } } } }),
-      prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
+      supabase.from("users").select("*", { count: "exact", head: true }),
+      supabase.from("organizations").select("*", { count: "exact", head: true }),
+      supabase.from("workspaces").select("*", { count: "exact", head: true }).eq("is_active", true),
+      supabase.from("users").select("*", { count: "exact", head: true }).eq("is_active", true),
+      supabase.from("products").select("*", { count: "exact", head: true }),
+      supabase.from("orders").select("*", { count: "exact", head: true }),
     ]);
 
-    const ordersAgg = await prisma.order.aggregate({ _sum: { total: true } });
-    const totalRevenue = ordersAgg._sum.total || 0;
+    // Recent users
+    const { data: recentUsers } = await supabase
+      .from("users")
+      .select("id, email, first_name, last_name, role, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5);
 
-    const userGrowth = await Promise.all(
-      [5, 4, 3, 2, 1, 0].map(async (i) => {
-        const start = new Date();
-        start.setMonth(start.getMonth() - i);
-        start.setDate(1);
-        const end = new Date(start);
-        end.setMonth(end.getMonth() + 1);
-        const count = await prisma.user.count({
-          where: { createdAt: { gte: start, lt: end } },
-        });
-        return {
-          month: start.toLocaleDateString("fr-FR", { month: "short" }),
-          users: count,
-        };
-      })
-    );
+    // Recent logins
+    const { data: recentLogins } = await supabase
+      .from("login_history")
+      .select("id, ip_address, location, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5);
 
-    const orgGrowth = await Promise.all(
-      [5, 4, 3, 2, 1, 0].map(async (i) => {
-        const start = new Date();
-        start.setMonth(start.getMonth() - i);
-        start.setDate(1);
-        const end = new Date(start);
-        end.setMonth(end.getMonth() + 1);
-        const count = await prisma.organization.count({
-          where: { createdAt: { gte: start, lt: end } },
-        });
-        return {
-          month: start.toLocaleDateString("fr-FR", { month: "short" }),
-          organizations: count,
-        };
-      })
-    );
+    // Recent activity
+    const { data: recentActivity } = await supabase
+      .from("audit_logs")
+      .select("id, action, description, entity, created_at")
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    // Orders aggregate (sum total)
+    const { data: ordersData } = await supabase
+      .from("orders")
+      .select("total");
+
+    const totalRevenue = ordersData?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
 
     return NextResponse.json({
       platform: {
-        totalUsers,
-        totalOrganizations,
-        totalWorkspaces,
-        activeUsers,
-        totalEmployees,
+        totalUsers: totalUsers || 0,
+        totalOrganizations: totalOrganizations || 0,
+        totalWorkspaces: activeWorkspaces || 0,
+        activeUsers: activeUsers || 0,
+        totalEmployees: activeUsers || 0,
         totalRevenue,
-        totalOrders,
-        totalProducts,
-        totalMedicines,
-        totalPatients,
-        totalStudents,
-        totalTeachers,
+        totalOrders: totalOrders || 0,
+        totalProducts: totalProducts || 0,
       },
       systemHealth: {
         database: { status: dbStatus, latency: apiLatency },
@@ -110,31 +85,25 @@ export async function GET() {
         cache: { status: "healthy", latency: 0 },
         storage: { status: "healthy", latency: 0 },
       },
-      charts: {
-        userGrowth,
-        orgGrowth,
-      },
-      recentUsers: recentUsers.map((u) => ({
+      recentUsers: (recentUsers || []).map((u) => ({
         id: u.id,
         email: u.email,
-        name: `${u.firstName || ""} ${u.lastName || ""}`.trim(),
+        name: `${u.first_name || ""} ${u.last_name || ""}`.trim(),
         role: u.role,
-        createdAt: u.createdAt.toISOString(),
+        createdAt: u.created_at,
       })),
-      recentLogins: recentLogins.map((l) => ({
+      recentLogins: (recentLogins || []).map((l) => ({
         id: l.id,
-        userName: `${l.user.firstName || ""} ${l.user.lastName || ""}`.trim() || l.user.email,
-        email: l.user.email,
-        ipAddress: l.ipAddress,
+        ipAddress: l.ip_address,
         location: l.location,
-        createdAt: l.createdAt.toISOString(),
+        createdAt: l.created_at,
       })),
-      recentActivity: recentActivity.map((a) => ({
+      recentActivity: (recentActivity || []).map((a) => ({
         id: a.id,
         action: a.action,
         description: a.description,
         entity: a.entity,
-        createdAt: a.createdAt.toISOString(),
+        createdAt: a.created_at,
       })),
     });
   } catch (error) {

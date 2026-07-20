@@ -1,3 +1,4 @@
+import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, getActiveWorkspace } from "@/lib/auth-helpers";
 
 /**
@@ -7,7 +8,7 @@ import { getCurrentUser, getActiveWorkspace } from "@/lib/auth-helpers";
 export async function isModuleEnabled(moduleId: string): Promise<boolean> {
   const user = await getCurrentUser();
   if (!user) return false;
-  
+
   // Admins bypass module restrictions
   if (["SUPER_ADMIN", "ADMIN"].includes(user.role)) return true;
 
@@ -19,7 +20,7 @@ export async function isModuleEnabled(moduleId: string): Promise<boolean> {
     : (activeWorkspace.settings || {});
 
   const enabledModules: string[] = settings.enabledModules || [];
-  
+
   // If no modules explicitly defined, allow all (backward compatible)
   if (enabledModules.length === 0) return true;
 

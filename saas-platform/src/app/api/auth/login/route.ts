@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { compare } from "bcryptjs";
-import prisma from "@/lib/db";
+import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
-import { SignJWT } from "jose";
-import { getJwtSecret } from "@/lib/auth-helpers";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, password, rememberMe } = body;
+    const { email, password } = body;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -17,125 +14,97 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Authenticate with Supabase
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
 
-    if (!user) {
+    if (error) {
+      console.error("Supabase login error:", error.message);
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect." },
         { status: 401 }
       );
     }
 
-    if (!user.isActive) {
+    if (!data.user) {
+      return NextResponse.json(
+        { error: "Email ou mot de passe incorrect." },
+        { status: 401 }
+      );
+    }
+
+    // Get user profile from our users table
+    const { data: user } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", data.user.id)
+      .single();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Profil utilisateur introuvable." },
+        { status: 404 }
+      );
+    }
+
+    if (!user.is_active) {
+      await supabase.auth.signOut();
       return NextResponse.json(
         { error: "Ce compte a été désactivé." },
         { status: 403 }
       );
     }
 
-    // Verify password
-    if (!user.passwordHash) {
-      return NextResponse.json(
-        { error: "Ce compte utilise une connexion sociale." },
-        { status: 401 }
-      );
-    }
+    // Update last login and status
+    await supabase
+      .from("users")
+      .update({ last_login_at: new Date().toISOString(), online_status: "online" })
+      .eq("id", user.id);
 
-    const isValid = await compare(password, user.passwordHash);
-    if (!isValid) {
-      // Log failed attempt
-      await prisma.loginHistory.create({
-        data: {
-          userId: user.id,
-          success: false,
-          method: "password",
-        },
-      });
-
-      return NextResponse.json(
-        { error: "Email ou mot de passe incorrect." },
-        { status: 401 }
-      );
-    }
-
-    // Update last login
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lastLoginAt: new Date(),
-        onlineStatus: "online",
-      },
+    // Log login
+    await supabase.from("login_history").insert({
+      user_id: user.id,
+      success: true,
+      method: "password",
     });
 
-    // Log successful login
-    await prisma.loginHistory.create({
-      data: {
-        userId: user.id,
-        success: true,
-        method: "password",
-      },
-    });
-
-    // Generate JWT
-    const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60; // 30 days or 7 days
-    const token = await new SignJWT({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    })
-      .setProtectedHeader({ alg: "HS256" })
-      .setIssuedAt()
-      .setExpirationTime(rememberMe ? "30d" : "7d")
-      .sign(getJwtSecret());
-
-    // Set cookie
+    // Set active workspace if exactly one workspace is available
     const cookieStore = await cookies();
-    cookieStore.set("session", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge,
-      path: "/",
-    });
+    const { data: memberships } = await supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", user.id);
 
-    // Set active workspace automatically when exactly one workspace is available
-    const memberships = await prisma.organizationMember.findMany({ where: { userId: user.id }, select: { organizationId: true } });
-    const orgIds = memberships.map((m) => m.organizationId);
-    const workspaces = await prisma.workspace.findMany({ where: { organizationId: { in: orgIds }, isActive: true } });
-    const requestedWorkspaceId = cookieStore.get("activeWorkspace")?.value;
-    const validWorkspace = workspaces.find((workspace) => workspace.id === requestedWorkspaceId);
+    if (memberships && memberships.length > 0) {
+      const orgIds = memberships.map((m) => m.organization_id);
+      const { data: workspaces } = await supabase
+        .from("workspaces")
+        .select("*")
+        .in("organization_id", orgIds)
+        .eq("is_active", true);
 
-    if (validWorkspace) {
-      cookieStore.set("activeWorkspace", requestedWorkspaceId!, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge,
-        path: "/",
-      });
-    } else if (workspaces.length === 1) {
-      cookieStore.set("activeWorkspace", workspaces[0].id, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge,
-        path: "/",
-      });
-    } else {
-      cookieStore.set("activeWorkspace", "", { maxAge: 0, path: "/" });
+      if (workspaces && workspaces.length === 1) {
+        cookieStore.set("activeWorkspace", workspaces[0].id, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 30 * 24 * 60 * 60,
+          path: "/",
+        });
+      }
     }
 
     return NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName: user.first_name,
+        lastName: user.last_name,
         role: user.role,
-        avatarUrl: user.avatarUrl,
+        avatarUrl: user.avatar_url,
       },
     });
   } catch (error) {

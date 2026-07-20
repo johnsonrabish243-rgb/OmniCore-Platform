@@ -1,91 +1,64 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
-import { getJwtSecret } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("session")?.value;
-    if (!token) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
 
-    const { payload } = await jwtVerify(token, getJwtSecret());
-    const notifications = await prisma.notification.findMany({
-      where: { userId: payload.userId as string },
-      orderBy: { createdAt: "desc" },
-      take: 50,
+    const { data: notifications } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    const { count: unreadCount } = await supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+
+    return NextResponse.json({
+      notifications: notifications || [],
+      unreadCount: unreadCount || 0,
     });
-
-    const unreadCount = await prisma.notification.count({
-      where: { userId: payload.userId as string, read: false },
-    });
-
-    return NextResponse.json({ notifications, unreadCount });
   } catch (error) {
     console.error("Notifications fetch error:", error);
-    return NextResponse.json({ error: "Erreur" }, { status: 500 });
+    return NextResponse.json({ notifications: [], unreadCount: 0 });
   }
 }
 
-export async function PATCH(request: Request) {
+export async function PUT(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("session")?.value;
-    if (!token) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-
-    const { payload } = await jwtVerify(token, getJwtSecret());
-    const body = await request.json();
-    const { notificationId, readAll } = body;
-
-    if (readAll) {
-      await prisma.notification.updateMany({
-        where: { userId: payload.userId as string, read: false },
-        data: { read: true },
-      });
-      return NextResponse.json({ success: true });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    if (!notificationId) return NextResponse.json({ error: "notificationId requis" }, { status: 400 });
+    const { notificationId, markAllRead } = await request.json();
 
-    await prisma.notification.updateMany({
-      where: { id: notificationId, userId: payload.userId as string },
-      data: { read: true },
-    });
+    if (markAllRead) {
+      await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", user.id)
+        .eq("read", false);
+    } else if (notificationId) {
+      await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", notificationId)
+        .eq("user_id", user.id);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Notifications PATCH error:", error);
-    return NextResponse.json({ error: "Erreur" }, { status: 500 });
-  }
-}
-
-export async function DELETE(request: Request) {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("session")?.value;
-    if (!token) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-
-    const { payload } = await jwtVerify(token, getJwtSecret());
-    const body = await request.json();
-    const { notificationId, clearAll } = body;
-
-    if (clearAll) {
-      await prisma.notification.deleteMany({
-        where: { userId: payload.userId as string },
-      });
-      return NextResponse.json({ success: true });
-    }
-
-    if (!notificationId) return NextResponse.json({ error: "notificationId requis" }, { status: 400 });
-
-    await prisma.notification.deleteMany({
-      where: { id: notificationId, userId: payload.userId as string },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Notifications DELETE error:", error);
-    return NextResponse.json({ error: "Erreur" }, { status: 500 });
+    console.error("Notifications update error:", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

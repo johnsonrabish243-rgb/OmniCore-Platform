@@ -1,18 +1,14 @@
 import { NextResponse } from "next/server";
-import { hash } from "bcryptjs";
-import prisma from "@/lib/db";
-import { getCurrentUser, getJwtSecret } from "@/lib/auth-helpers";
-import { cookies } from "next/headers";
-import { SignJWT } from "jose";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth-helpers";
 
 export async function POST(request: Request) {
   try {
-    // Self-registration: allow creating accounts without admin auth
-    // Admins can also create accounts for others
+    // Check if current user is already authenticated (admin creating account for someone else)
     const currentUser = await getCurrentUser();
 
     const body = await request.json();
-    const { email, password, firstName, lastName, companyName, organizationId } = body;
+    const { email, password, firstName, lastName, companyName } = body;
 
     // Validate input
     if (!email || !password || !firstName || !lastName) {
@@ -29,37 +25,57 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    const supabase = await createClient();
+
+    // Create user with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
     });
 
-    if (existingUser) {
+    if (authError) {
+      if (authError.message.includes("already")) {
+        return NextResponse.json(
+          { error: "Un compte avec cet email existe déjà." },
+          { status: 409 }
+        );
+      }
       return NextResponse.json(
-        { error: "Un compte avec cet email existe déjà." },
-        { status: 409 }
+        { error: "Erreur lors de la création du compte." },
+        { status: 400 }
       );
     }
 
-    // Hash password
-    const passwordHash = await hash(password, 12);
+    if (!authData.user) {
+      return NextResponse.json(
+        { error: "Erreur lors de la création du compte." },
+        { status: 500 }
+      );
+    }
 
     // Assign role - default to EMPLOYEE for self-registration
-    // SUPER_ADMIN creating accounts for others can set a custom role
     const role = currentUser?.role === "SUPER_ADMIN" ? (body.role || "EMPLOYEE") : "EMPLOYEE";
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        firstName,
-        lastName,
-        language: "fr",
-        timezone: "Europe/Paris",
-        role,
-      },
+    // Create user profile in our users table
+    const { error: profileError } = await supabase.from("users").insert({
+      id: authData.user.id,
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      role,
+      language: "fr",
+      timezone: "Europe/Paris",
     });
+
+    if (profileError) {
+      console.error("Profile creation error:", profileError);
+      // Clean up the auth user if profile creation fails
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      return NextResponse.json(
+        { error: "Erreur lors de la création du profil." },
+        { status: 500 }
+      );
+    }
 
     // If company name provided, create organization
     if (companyName) {
@@ -68,69 +84,35 @@ export async function POST(request: Request) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
 
-      const org = await prisma.organization.create({
-        data: {
+      const { data: org, error: orgError } = await supabase
+        .from("organizations")
+        .insert({
           name: companyName,
-          slug: slug || `org-${user.id.slice(0, 8)}`,
-        },
-      });
+          slug: slug || `org-${authData.user.id.slice(0, 8)}`,
+        })
+        .select()
+        .single();
 
-      await prisma.organizationMember.create({
-        data: {
-          organizationId: org.id,
-          userId: user.id,
+      if (org && !orgError) {
+        await supabase.from("organization_members").insert({
+          organization_id: org.id,
+          user_id: authData.user.id,
           role: "OWNER",
-          isOwner: true,
-        },
-      });
-    }
-
-    // If organizationId was provided, add user to that organization
-    if (organizationId && !companyName) {
-      const memberExists = await prisma.organizationMember.findUnique({
-        where: { organizationId_userId: { organizationId, userId: user.id } },
-      }).catch(() => null);
-      if (!memberExists) {
-        await prisma.organizationMember.create({
-          data: {
-            organizationId,
-            userId: user.id,
-            role: "EMPLOYEE",
-          },
+          is_owner: true,
         });
       }
     }
 
-    // Generate session cookie for self-registration (no admin context)
-    // When an admin creates a user, skip cookie to stay logged in as admin
-    if (!currentUser) {
-      const token = await new SignJWT({
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-      })
-        .setProtectedHeader({ alg: "HS256" })
-        .setIssuedAt()
-        .setExpirationTime("7d")
-        .sign(getJwtSecret());
-
-      const cookieStore = await cookies();
-      cookieStore.set("session", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60,
-        path: "/",
-      });
-    }
+    // For admin-created users, don't sign them in (admin stays logged in)
+    // For self-registration, the session is already set by Supabase
 
     return NextResponse.json({
       user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
+        id: authData.user.id,
+        email,
+        firstName,
+        lastName,
+        role,
       },
     });
   } catch (error) {

@@ -1,37 +1,29 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
-import { getJwtSecret } from "@/lib/auth-helpers";
-
-async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("session")?.value;
-  if (!token) return null;
-  try {
-    const { payload } = await jwtVerify(token, getJwtSecret());
-    return await prisma.user.findUnique({ where: { id: payload.userId as string } });
-  } catch (error) { console.error("Admin orgs getCurrentUser error:", error); return null; }
-}
+import { getCurrentUser } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
-  const organizations = await prisma.organization.findMany({
-    include: { _count: { select: { members: true } }, billing: true },
-    orderBy: { createdAt: "desc" },
-  });
-  const mapped = organizations.map((org) => ({
+
+  const supabase = await createClient();
+  const { data: organizations } = await supabase
+    .from("organizations")
+    .select("*, billing:tier, members:organization_members(count)")
+    .order("created_at", { ascending: false });
+
+  const mapped = (organizations || []).map((org: any) => ({
     id: org.id,
     name: org.name,
     slug: org.slug,
-    members: org._count.members,
-    plan: org.billing?.tier || "FREE",
-    status: org.isActive ? "active" : "suspended",
-    createdAt: org.createdAt,
+    members: org.members?.[0]?.count || 0,
+    plan: org.tier || "FREE",
+    status: org.is_active ? "active" : "suspended",
+    createdAt: org.created_at,
   }));
+
   return NextResponse.json({ organizations: mapped });
 }
 
@@ -40,13 +32,19 @@ export async function POST(request: Request) {
   if (!user || user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
+
+  const supabase = await createClient();
   const body = await request.json();
   const { name } = body;
+
   if (!name) return NextResponse.json({ error: "Nom requis" }, { status: 400 });
 
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const org = await prisma.organization.create({
-    data: { name, slug: slug || `org-${Date.now()}` },
-  });
+  const { data: org } = await supabase
+    .from("organizations")
+    .insert({ name, slug: slug || `org-${Date.now()}` })
+    .select()
+    .single();
+
   return NextResponse.json({ organization: org });
 }

@@ -336,7 +336,7 @@ export default function PharmacyPage() {
                         <td className="p-4 text-xs text-muted-foreground">
                           {new Date(mov.createdAt || mov.date).toLocaleDateString("fr-FR")}
                         </td>
-                        <td className="p-4 text-xs text-muted-foreground">{mov.user}</td>
+                        <td className="p-4 text-xs text-muted-foreground">{mov.user_name}</td>
                         <td className="p-4 text-xs text-muted-foreground">{mov.note}</td>
                       </tr>
                     );

@@ -1,112 +1,29 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-helpers";
-import { requireModule } from "@/lib/workspace-modules";
 
-export async function GET(request: Request) {
+export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const url = new URL(request.url);
-  const organizationId = url.searchParams.get("organizationId");
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
-  const memberships = await prisma.organizationMember.findMany({
-    where: { userId: user.id },
-    select: { organizationId: true },
-  });
-  const orgIds = memberships.map((m) => m.organizationId);
+  const { data: memberships } = await supabase.from("organization_members").select("organization_id").eq("user_id", user.id);
+  const orgIds = memberships?.map((m) => m.organization_id) || [];
 
-  const where = organizationId ? { organizationId } : { organizationId: { in: orgIds } };
-  const students = await prisma.student.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-  });
+  const { data: students } = await supabase.from("students").select("*, class:classes(*)").in("organization_id", orgIds).order("created_at", { ascending: false });
 
-  return NextResponse.json({ students, total: students.length });
+  return NextResponse.json({ students: students || [] });
 }
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const moduleCheck = await requireModule("education");
-  if (moduleCheck) return NextResponse.json(moduleCheck, { status: moduleCheck.status });
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
   const body = await request.json();
-  const { organizationId, classId, firstName, lastName, email, grade, attendance, status } = body;
-  if (!organizationId) {
-    return NextResponse.json({ error: "organizationId requis" }, { status: 400 });
-  }
-
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  const student = await prisma.student.create({
-    data: {
-      organizationId,
-      classId,
-      firstName,
-      lastName,
-      email,
-      grade,
-      attendance: attendance || 0,
-      status: status || "active",
-    },
-  });
-
+  const { data: student } = await supabase.from("students").insert({ ...body }).select().single();
   return NextResponse.json({ student });
-}
-
-export async function PATCH(request: Request) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
-  const body = await request.json();
-  const { id, ...data } = body;
-  if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
-
-  const student = await prisma.student.findUnique({ where: { id } });
-  if (!student) return NextResponse.json({ error: "Étudiant introuvable" }, { status: 404 });
-
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId: student.organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  const updated = await prisma.student.update({
-    where: { id },
-    data: {
-      ...(data.firstName !== undefined && { firstName: data.firstName }),
-      ...(data.lastName !== undefined && { lastName: data.lastName }),
-      ...(data.email !== undefined && { email: data.email }),
-      ...(data.grade !== undefined && { grade: data.grade }),
-      ...(data.attendance !== undefined && { attendance: data.attendance }),
-      ...(data.status !== undefined && { status: data.status }),
-      ...(data.classId !== undefined && { classId: data.classId }),
-    },
-  });
-
-  return NextResponse.json({ student: updated });
-}
-
-export async function DELETE(request: Request) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
-  const body = await request.json();
-  const { id } = body;
-  if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
-
-  const student = await prisma.student.findUnique({ where: { id } });
-  if (!student) return NextResponse.json({ error: "Étudiant introuvable" }, { status: 404 });
-
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId: student.organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  await prisma.student.delete({ where: { id } });
-  return NextResponse.json({ success: true });
 }

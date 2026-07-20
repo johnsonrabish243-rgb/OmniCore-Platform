@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import prisma from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
 function slugify(value: string) {
@@ -16,6 +15,12 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
     const body = await request.json();
     const {
@@ -34,85 +39,99 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Workspace name is required" }, { status: 400 });
     }
 
-    let organization;
+    let organization: any;
     let orgId = organizationId;
 
     if (orgId) {
-      const membership = await prisma.organizationMember.findFirst({
-        where: { organizationId: orgId, userId: user.id },
-      });
+      const { data: membership } = await supabase
+        .from("organization_members")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("user_id", user.id)
+        .single();
+
       if (!membership && user.role !== "SUPER_ADMIN") {
         return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
       }
-      organization = await prisma.organization.findUnique({ where: { id: orgId } });
-      if (!organization) {
+
+      const { data: org } = await supabase.from("organizations").select("*").eq("id", orgId).single();
+      if (!org) {
         return NextResponse.json({ error: "Organisation introuvable" }, { status: 404 });
       }
+      organization = org;
     } else {
       if (!organizationName || organizationName.trim().length === 0) {
         return NextResponse.json({ error: "Organization name is required" }, { status: 400 });
       }
+
       const slugBase = slugify(organizationName);
       const slug = slugBase || `org-${Date.now()}`;
-      const existingOrg = await prisma.organization.findUnique({ where: { slug } });
+      const { data: existingOrg } = await supabase.from("organizations").select("id").eq("slug", slug).single();
       const uniqueSlug = existingOrg ? `${slug}-${Date.now()}` : slug;
 
-      organization = await prisma.organization.create({
-        data: {
+      const { data: org } = await supabase
+        .from("organizations")
+        .insert({
           name: organizationName.trim(),
           slug: uniqueSlug,
-          industry: industry?.trim() || undefined,
+          industry: industry?.trim() || null,
           settings: {
-            country: country?.trim() || undefined,
-            currency: currency || undefined,
-            language: language || undefined,
-            timezone: timezone || undefined,
+            country: country?.trim() || null,
+            currency: currency || null,
+            language: language || null,
+            timezone: timezone || null,
             onboardingCompleted: true,
           },
-          logoUrl: logoUrl || undefined,
-        },
-      });
+          logo_url: logoUrl || null,
+        })
+        .select()
+        .single();
 
-      orgId = organization.id;
-      await prisma.organizationMember.create({
-        data: {
-          organizationId: orgId,
-          userId: user.id,
+      if (org) {
+        orgId = org.id;
+        await supabase.from("organization_members").insert({
+          organization_id: orgId,
+          user_id: user.id,
           role: "OWNER",
-          isOwner: true,
-        },
-      });
+          is_owner: true,
+        });
+        organization = org;
+      }
     }
 
     const workspaceSlugBase = slugify(workspaceName);
     const workspaceSlug = workspaceSlugBase || `workspace-${Date.now()}`;
-    const existingWorkspace = await prisma.workspace.findFirst({
-      where: { organizationId: orgId!, slug: workspaceSlug },
-    });
-    const uniqueWorkspaceSlug = existingWorkspace
-      ? `${workspaceSlug}-${Date.now()}`
-      : workspaceSlug;
+    const { data: existingWorkspace } = await supabase
+      .from("workspaces")
+      .select("id")
+      .eq("organization_id", orgId!)
+      .eq("slug", workspaceSlug)
+      .single();
 
-    const workspace = await prisma.workspace.create({
-      data: {
-        organizationId: orgId!,
+    const uniqueWorkspaceSlug = existingWorkspace ? `${workspaceSlug}-${Date.now()}` : workspaceSlug;
+
+    const { data: workspace } = await supabase
+      .from("workspaces")
+      .insert({
+        organization_id: orgId!,
         name: workspaceName.trim(),
         slug: uniqueWorkspaceSlug,
-        description: body.description?.trim() || undefined,
+        description: body.description?.trim() || null,
         type: body.type?.trim() || "Workspace",
         settings: {
-          currency: currency || undefined,
-          language: language || undefined,
-          timezone: timezone || undefined,
-          industry: industry?.trim() || undefined,
+          currency: currency || null,
+          language: language || null,
+          timezone: timezone || null,
+          industry: industry?.trim() || null,
           createdBy: user.id,
         },
-        isActive: true,
-      },
-    });
+        is_active: true,
+      })
+      .select()
+      .single();
 
     const cookieStore = await cookies();
-    cookieStore.set("activeWorkspace", workspace.id, {
+    cookieStore.set("activeWorkspace", workspace?.id || "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

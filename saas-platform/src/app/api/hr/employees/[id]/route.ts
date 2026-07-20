@@ -1,38 +1,62 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth-helpers";
+import { getCurrentUser, getActiveWorkspace } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: employee } = await supabase
+    .from("employees")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (!employee) {
+    return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
+  }
+
+  return NextResponse.json({ employee });
+}
+
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
   const { id } = await params;
   const body = await request.json();
-  const { firstName, lastName, jobTitle, department } = body;
+  const supabase = await createClient();
 
-  // Verify caller belongs to same organization
-  const memberships = await prisma.organizationMember.findMany({ where: { userId: user.id }, select: { organizationId: true } });
-  const orgIds = memberships.map((m) => m.organizationId);
-  const member = await prisma.organizationMember.findFirst({ where: { userId: id, organizationId: { in: orgIds } } });
-  if (!member) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  const { data: employee } = await supabase
+    .from("employees")
+    .update({
+      ...(body.firstName && { first_name: body.firstName }),
+      ...(body.lastName && { last_name: body.lastName }),
+      ...(body.email && { email: body.email }),
+      ...(body.phone && { phone: body.phone }),
+      ...(body.jobTitle && { job_title: body.jobTitle }),
+      ...(body.department && { department: body.department }),
+      ...(body.salary !== undefined && { salary: body.salary }),
+      ...(body.status && { status: body.status }),
+    })
+    .eq("id", id)
+    .select()
+    .single();
 
-  const updated = await prisma.user.update({ where: { id }, data: { ...(firstName && { firstName }), ...(lastName && { lastName }), ...(jobTitle && { jobTitle }), ...(department && { department }) }, select: { id: true, email: true, firstName: true, lastName: true, jobTitle: true, department: true } });
-
-  return NextResponse.json({ employee: updated });
+  return NextResponse.json({ employee });
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
   const { id } = await params;
+  const supabase = await createClient();
 
-  // Verify caller belongs to same organization
-  const memberships = await prisma.organizationMember.findMany({ where: { userId: user.id }, select: { organizationId: true } });
-  const orgIds = memberships.map((m) => m.organizationId);
-  const member = await prisma.organizationMember.findFirst({ where: { userId: id, organizationId: { in: orgIds } } });
-  if (!member) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  // Remove membership
-  await prisma.organizationMember.deleteMany({ where: { userId: id, organizationId: { in: orgIds } } });
+  await supabase.from("employees").delete().eq("id", id);
 
   return NextResponse.json({ success: true });
 }

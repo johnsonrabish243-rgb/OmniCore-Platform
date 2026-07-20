@@ -1,41 +1,39 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const memberships = await prisma.organizationMember.findMany({
-    where: { userId: user.id },
-    select: { organizationId: true },
-  });
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
-  const orgIds = memberships.map((m) => m.organizationId);
+  const { data: memberships } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id);
 
-  const leads = await prisma.lead.findMany({
-    where: { organizationId: { in: orgIds } },
-    include: {
-      assignedTo: { select: { id: true, firstName: true, lastName: true } },
-      createdBy: { select: { id: true, firstName: true, lastName: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const orgIds = memberships?.map((m) => m.organization_id) || [];
 
-  const mapped = leads.map((lead) => ({
+  const { data: leads } = await supabase
+    .from("leads")
+    .select("*, assigned_to:users!leads_assigned_to_id_fkey(id, first_name, last_name)")
+    .in("organization_id", orgIds)
+    .order("created_at", { ascending: false });
+
+  const mapped = (leads || []).map((lead: any) => ({
     id: lead.id,
-    name: `${lead.firstName || ""} ${lead.lastName || ""}`.trim(),
+    name: `${lead.first_name || ""} ${lead.last_name || ""}`.trim(),
     email: lead.email,
     phone: lead.phone,
     company: lead.company,
-    jobTitle: lead.jobTitle,
+    jobTitle: lead.job_title,
     source: lead.source,
     status: lead.status,
     score: lead.score,
     notes: lead.notes,
-    assignedTo: lead.assignedTo ? `${lead.assignedTo.firstName || ""} ${lead.assignedTo.lastName || ""}`.trim() : null,
-    createdBy: lead.createdBy ? `${lead.createdBy.firstName || ""} ${lead.createdBy.lastName || ""}`.trim() : null,
-    createdAt: lead.createdAt,
+    assignedTo: lead.assigned_to ? `${lead.assigned_to.first_name || ""} ${lead.assigned_to.last_name || ""}`.trim() : null,
+    createdAt: lead.created_at,
   }));
 
   return NextResponse.json({ leads: mapped });
@@ -45,6 +43,9 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
   const body = await request.json();
   const { organizationId, firstName, lastName, email, phone, company, jobTitle, source, status, score, notes, assignedToId } = body;
 
@@ -52,28 +53,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "organizationId requis" }, { status: 400 });
   }
 
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  const lead = await prisma.lead.create({
-    data: {
-      organizationId,
-      firstName,
-      lastName,
+  const { data: lead } = await supabase
+    .from("leads")
+    .insert({
+      organization_id: organizationId,
+      first_name: firstName,
+      last_name: lastName,
       email,
       phone,
       company,
-      jobTitle,
+      job_title: jobTitle,
       source,
       status: status || "new",
       score: score || 0,
       notes,
-      assignedToId: assignedToId || user.id,
-      createdById: user.id,
-    },
-  });
+      assigned_to_id: assignedToId || user.id,
+      created_by_id: user.id,
+    })
+    .select()
+    .single();
 
   return NextResponse.json({ lead });
 }
@@ -82,55 +80,47 @@ export async function PATCH(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
   const body = await request.json();
   const { id, ...data } = body;
-
   if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
 
-  const lead = await prisma.lead.findUnique({ where: { id } });
-  if (!lead) return NextResponse.json({ error: "Lead introuvable" }, { status: 404 });
+  const updateData: Record<string, any> = {};
+  if (data.firstName !== undefined) updateData.first_name = data.firstName;
+  if (data.lastName !== undefined) updateData.last_name = data.lastName;
+  if (data.email !== undefined) updateData.email = data.email;
+  if (data.phone !== undefined) updateData.phone = data.phone;
+  if (data.company !== undefined) updateData.company = data.company;
+  if (data.jobTitle !== undefined) updateData.job_title = data.jobTitle;
+  if (data.source !== undefined) updateData.source = data.source;
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.score !== undefined) updateData.score = data.score;
+  if (data.notes !== undefined) updateData.notes = data.notes;
+  if (data.assignedToId !== undefined) updateData.assigned_to_id = data.assignedToId;
 
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId: lead.organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  const { data: lead } = await supabase
+    .from("leads")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
 
-  const updated = await prisma.lead.update({
-    where: { id },
-    data: {
-      ...(data.firstName !== undefined && { firstName: data.firstName }),
-      ...(data.lastName !== undefined && { lastName: data.lastName }),
-      ...(data.email !== undefined && { email: data.email }),
-      ...(data.phone !== undefined && { phone: data.phone }),
-      ...(data.company !== undefined && { company: data.company }),
-      ...(data.jobTitle !== undefined && { jobTitle: data.jobTitle }),
-      ...(data.source !== undefined && { source: data.source }),
-      ...(data.status !== undefined && { status: data.status }),
-      ...(data.score !== undefined && { score: data.score }),
-      ...(data.notes !== undefined && { notes: data.notes }),
-      ...(data.assignedToId !== undefined && { assignedToId: data.assignedToId }),
-    },
-  });
-
-  return NextResponse.json({ lead: updated });
+  return NextResponse.json({ lead });
 }
 
 export async function DELETE(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
   const body = await request.json();
   const { id } = body;
   if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
 
-  const lead = await prisma.lead.findUnique({ where: { id } });
-  if (!lead) return NextResponse.json({ error: "Lead introuvable" }, { status: 404 });
-
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId: lead.organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  await prisma.lead.delete({ where: { id } });
+  await supabase.from("leads").delete().eq("id", id);
   return NextResponse.json({ success: true });
 }

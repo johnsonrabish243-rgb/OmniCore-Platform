@@ -1,22 +1,32 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
-import { getActiveWorkspace, getCurrentUser } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
+import { getActiveWorkspace } from "@/lib/auth-helpers";
 
 export async function GET() {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
       return NextResponse.json({ user: null }, { status: 401 });
     }
 
-    const memberships = await prisma.organizationMember.findMany({
-      where: { userId: user.id },
-      include: {
-        organization: {
-          select: { id: true, name: true, slug: true, logoUrl: true, tier: true },
-        },
-      },
-    });
+    // Fetch full user profile
+    const { data: profile } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile) {
+      return NextResponse.json({ user: null }, { status: 401 });
+    }
+
+    // Fetch organization memberships
+    const { data: memberships } = await supabase
+      .from("organization_members")
+      .select("organization_id, role, is_owner, organizations:organization_id(id, name, slug, logo_url, tier)")
+      .eq("user_id", user.id);
 
     const activeWorkspace = await getActiveWorkspace();
 
@@ -31,12 +41,22 @@ export async function GET() {
 
     return NextResponse.json({
       user: {
-        ...user,
-        organizations: memberships.map((m) => ({
-          ...m.organization,
+        id: profile.id,
+        email: profile.email,
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        role: profile.role,
+        avatarUrl: profile.avatar_url,
+        isActive: profile.is_active,
+        phone: profile.phone,
+        bio: profile.bio,
+        language: profile.language,
+        timezone: profile.timezone,
+        organizations: memberships?.map((m: any) => ({
+          ...m.organizations,
           role: m.role,
-          isOwner: m.isOwner,
-        })),
+          isOwner: m.is_owner,
+        })) || [],
         activeWorkspace: activeWorkspace
           ? {
               id: activeWorkspace.id,

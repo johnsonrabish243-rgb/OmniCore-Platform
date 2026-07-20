@@ -2,6 +2,7 @@ import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { routing } from "./i18n/routing";
+import { updateSession } from "./lib/supabase/middleware";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -83,21 +84,22 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const sessionToken = request.cookies.get("session")?.value;
+  // Use Supabase to refresh the session and get the authenticated user
+  const { supabaseResponse, user } = await updateSession(request);
   const { locale } = getPathWithoutLocale(pathname);
 
   // Authenticated user visiting landing page → redirect to dashboard
-  if (sessionToken && isLanding(pathname)) {
+  if (user && isLanding(pathname)) {
     return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
   }
 
   // Authenticated user visiting auth pages (login, signup) → redirect to dashboard
-  if (sessionToken && isPublic(pathname)) {
+  if (user && isPublic(pathname)) {
     return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
   }
 
   // Unauthenticated user visiting protected page → redirect to landing
-  if (!sessionToken && isProtected(pathname)) {
+  if (!user && isProtected(pathname)) {
     return NextResponse.redirect(new URL(`/${locale}`, request.url));
   }
 

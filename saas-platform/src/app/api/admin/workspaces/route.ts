@@ -1,30 +1,35 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
-  const memberships = await prisma.organizationMember.findMany({
-    where: { userId: user.id },
-    select: { organizationId: true },
-  });
+  const supabase = await createClient();
 
-  const orgIds = memberships.map((m) => m.organizationId);
+  const { data: memberships } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id);
 
-  const workspaces = await prisma.workspace.findMany({
-    where: { organizationId: { in: orgIds }, isActive: true },
-    orderBy: { name: "asc" },
-  });
+  const orgIds = memberships?.map((m) => m.organization_id) || [];
 
-  return NextResponse.json({ workspaces });
+  const { data: workspaces } = await supabase
+    .from("workspaces")
+    .select("*")
+    .in("organization_id", orgIds)
+    .eq("is_active", true)
+    .order("name", { ascending: true });
+
+  return NextResponse.json({ workspaces: workspaces || [] });
 }
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
+  const supabase = await createClient();
   const body = await request.json();
   const { organizationId, name, slug, description, type } = body;
 
@@ -33,17 +38,27 @@ export async function POST(request: Request) {
   }
 
   // Check permissions
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId, userId: user.id, isOwner: true },
-  });
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", user.id)
+    .eq("is_owner", true)
+    .single();
 
   if (!membership && user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
-  const workspace = await prisma.workspace.create({
-    data: { organizationId, name, slug, description, type },
-  });
+  const { data: workspace, error } = await supabase
+    .from("workspaces")
+    .insert({ organization_id: organizationId, name, slug, description, type })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: "Erreur lors de la création" }, { status: 500 });
+  }
 
   return NextResponse.json({ workspace });
 }

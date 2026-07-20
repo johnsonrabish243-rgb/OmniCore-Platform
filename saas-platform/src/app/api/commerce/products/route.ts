@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
@@ -9,24 +8,40 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const organizationId = url.searchParams.get("organizationId");
 
-  const memberships = await prisma.organizationMember.findMany({
-    where: { userId: user.id },
-    select: { organizationId: true },
-  });
-  const orgIds = memberships.map((m) => m.organizationId);
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-  const where = organizationId ? { organizationId } : { organizationId: { in: orgIds } };
-  const products = await prisma.product.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-  });
+  const { data: memberships } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id);
 
-  return NextResponse.json({ products, total: products.length });
+  const orgIds = memberships?.map((m) => m.organization_id) || [];
+
+  let query = supabase.from("products").select("*").order("created_at", { ascending: false });
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  } else {
+    query = query.in("organization_id", orgIds);
+  }
+
+  const { data: products } = await query;
+
+  return NextResponse.json({ products: products || [], total: products?.length || 0 });
 }
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   const body = await request.json();
   const { organizationId, name, sku, description, category, price, stock } = body;
@@ -35,22 +50,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "organizationId et name requis" }, { status: 400 });
   }
 
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  const product = await prisma.product.create({
-    data: {
-      organizationId,
+  const { data: product } = await supabase
+    .from("products")
+    .insert({
+      organization_id: organizationId,
       name,
       sku,
       description,
       category,
       price: price || 0,
       stock: stock || 0,
-    },
-  });
+    })
+    .select()
+    .single();
 
   return NextResponse.json({ product });
 }
@@ -59,50 +71,49 @@ export async function PATCH(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const body = await request.json();
   const { id, ...data } = body;
   if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
 
-  const product = await prisma.product.findUnique({ where: { id } });
-  if (!product) return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
+  const updateData: Record<string, any> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.sku !== undefined) updateData.sku = data.sku;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.category !== undefined) updateData.category = data.category;
+  if (data.price !== undefined) updateData.price = data.price;
+  if (data.stock !== undefined) updateData.stock = data.stock;
+  if (data.isActive !== undefined) updateData.is_active = data.isActive;
 
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId: product.organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  const { data: product } = await supabase
+    .from("products")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
 
-  const updated = await prisma.product.update({
-    where: { id },
-    data: {
-      ...(data.name !== undefined && { name: data.name }),
-      ...(data.sku !== undefined && { sku: data.sku }),
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.category !== undefined && { category: data.category }),
-      ...(data.price !== undefined && { price: data.price }),
-      ...(data.stock !== undefined && { stock: data.stock }),
-      ...(data.isActive !== undefined && { isActive: data.isActive }),
-    },
-  });
-
-  return NextResponse.json({ product: updated });
+  return NextResponse.json({ product });
 }
 
 export async function DELETE(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const body = await request.json();
   const { id } = body;
   if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
 
-  const product = await prisma.product.findUnique({ where: { id } });
-  if (!product) return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
-
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId: product.organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  await prisma.product.delete({ where: { id } });
+  await supabase.from("products").delete().eq("id", id);
   return NextResponse.json({ success: true });
 }

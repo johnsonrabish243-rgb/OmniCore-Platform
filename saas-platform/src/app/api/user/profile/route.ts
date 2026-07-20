@@ -1,43 +1,52 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
-import { getJwtSecret } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("session")?.value;
-    if (!token) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    const { payload } = await jwtVerify(token, getJwtSecret());
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId as string },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        bio: true,
-        phone: true,
-        avatarUrl: true,
-        role: true,
-        language: true,
-        timezone: true,
-        country: true,
-        createdAt: true,
-        lastLoginAt: true,
-        jobTitle: true,
-        department: true,
-        onlineStatus: true,
+    if (authError || !user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile) {
+      return NextResponse.json({ error: "Profil introuvable" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      user: {
+        id: profile.id,
+        email: profile.email,
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        phone: profile.phone,
+        bio: profile.bio,
+        avatarUrl: profile.avatar_url,
+        coverUrl: profile.cover_url,
+        jobTitle: profile.job_title,
+        organization: profile.organization,
+        department: profile.department,
+        language: profile.language,
+        timezone: profile.timezone,
+        country: profile.country,
+        currency: profile.currency,
+        address: profile.address,
+        emergencyContact: profile.emergency_contact,
+        role: profile.role,
+        isActive: profile.is_active,
+        lastLoginAt: profile.last_login_at,
+        createdAt: profile.created_at,
       },
     });
-
-    if (!user) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-
-    return NextResponse.json({ user });
   } catch (error) {
     console.error("Profile fetch error:", error);
-    return NextResponse.json({ error: "Erreur" }, { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

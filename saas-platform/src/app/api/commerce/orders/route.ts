@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { requireModule } from "@/lib/workspace-modules";
 
@@ -10,20 +9,30 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const organizationId = url.searchParams.get("organizationId");
 
-  const memberships = await prisma.organizationMember.findMany({
-    where: { userId: user.id },
-    select: { organizationId: true },
-  });
-  const orgIds = memberships.map((m) => m.organizationId);
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-  const where = organizationId ? { organizationId } : { organizationId: { in: orgIds } };
-  const orders = await prisma.order.findMany({
-    where,
-    include: { items: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const { data: memberships } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id);
 
-  return NextResponse.json({ orders, total: orders.length });
+  const orgIds = memberships?.map((m) => m.organization_id) || [];
+
+  let query = supabase.from("orders").select("*, items:order_items(*)").order("created_at", { ascending: false });
+
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  } else {
+    query = query.in("organization_id", orgIds);
+  }
+
+  const { data: orders } = await query;
+
+  return NextResponse.json({ orders: orders || [], total: orders?.length || 0 });
 }
 
 export async function POST(request: Request) {
@@ -33,6 +42,12 @@ export async function POST(request: Request) {
   const moduleCheck = await requireModule("commerce");
   if (moduleCheck) return NextResponse.json(moduleCheck, { status: moduleCheck.status });
 
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const body = await request.json();
   const { organizationId, customerName, customerEmail, notes, items } = body;
 
@@ -40,14 +55,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "organizationId requis" }, { status: 400 });
   }
 
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId, userId: user.id },
-  });
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", user.id)
+    .single();
+
   if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
   // Generate order number
-  const count = await prisma.order.count({ where: { organizationId } });
-  const orderNumber = `CMD-${String(count + 1).padStart(6, "0")}`;
+  const { count } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId);
+
+  const orderNumber = `CMD-${String((count || 0) + 1).padStart(6, "0")}`;
 
   // Calculate total from items
   let total = 0;
@@ -55,59 +78,72 @@ export async function POST(request: Request) {
     const itemTotal = (item.price || 0) * (item.quantity || 1);
     total += itemTotal;
     return {
-      productId: item.productId || null,
+      product_id: item.productId || null,
       name: item.name || "Article",
       quantity: item.quantity || 1,
       price: item.price || 0,
     };
   });
 
-  const order = await prisma.order.create({
-    data: {
-      organizationId,
-      orderNumber,
-      customerName,
-      customerEmail,
+  const { data: order } = await supabase
+    .from("orders")
+    .insert({
+      organization_id: organizationId,
+      order_number: orderNumber,
+      customer_name: customerName,
+      customer_email: customerEmail,
       status: "pending",
       total,
       notes,
-      items: {
-        create: orderItems,
-      },
-    },
-    include: { items: true },
-  });
+    })
+    .select()
+    .single();
 
-  return NextResponse.json({ order });
+  if (order && orderItems.length > 0) {
+    await supabase.from("order_items").insert(
+      orderItems.map((item: any) => ({ ...item, order_id: order.id }))
+    );
+  }
+
+  const { data: fullOrder } = await supabase
+    .from("orders")
+    .select("*, items:order_items(*)")
+    .eq("id", order?.id)
+    .single();
+
+  return NextResponse.json({ order: fullOrder });
 }
 
 export async function PATCH(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const body = await request.json();
   const { id, ...data } = body;
   if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
 
-  const order = await prisma.order.findUnique({ where: { id } });
+  const { data: order } = await supabase.from("orders").select("*").eq("id", id).single();
   if (!order) return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
 
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId: order.organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  const updateData: Record<string, any> = {};
+  if (data.status !== undefined) updateData.status = data.status;
+  if (data.customerName !== undefined) updateData.customer_name = data.customerName;
+  if (data.customerEmail !== undefined) updateData.customer_email = data.customerEmail;
+  if (data.notes !== undefined) updateData.notes = data.notes;
+  if (data.total !== undefined) updateData.total = data.total;
 
-  const updated = await prisma.order.update({
-    where: { id },
-    data: {
-      ...(data.status !== undefined && { status: data.status }),
-      ...(data.customerName !== undefined && { customerName: data.customerName }),
-      ...(data.customerEmail !== undefined && { customerEmail: data.customerEmail }),
-      ...(data.notes !== undefined && { notes: data.notes }),
-      ...(data.total !== undefined && { total: data.total }),
-    },
-    include: { items: true },
-  });
+  const { data: updated } = await supabase
+    .from("orders")
+    .update(updateData)
+    .eq("id", id)
+    .select("*, items:order_items(*)")
+    .single();
 
   return NextResponse.json({ order: updated });
 }
@@ -116,18 +152,16 @@ export async function DELETE(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const body = await request.json();
   const { id } = body;
   if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
 
-  const order = await prisma.order.findUnique({ where: { id } });
-  if (!order) return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
-
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId: order.organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  await prisma.order.delete({ where: { id } });
+  await supabase.from("orders").delete().eq("id", id);
   return NextResponse.json({ success: true });
 }

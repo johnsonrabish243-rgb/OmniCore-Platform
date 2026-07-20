@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { randomBytes } from "crypto";
-import { getJwtSecret } from "@/lib/auth-helpers";
 
 function generateApiKey(): string {
   return `oc_${randomBytes(32).toString("hex")}`;
@@ -11,19 +8,20 @@ function generateApiKey(): string {
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("session")?.value;
-    if (!token) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
 
-    const { payload } = await jwtVerify(token, getJwtSecret());
-    const apiKeys = await prisma.apiKey.findMany({
-      where: { userId: payload.userId as string },
-      select: { id: true, name: true, key: true, permissions: true, lastUsedAt: true, expiresAt: true, isActive: true, createdAt: true },
-      orderBy: { createdAt: "desc" },
-    });
+    const { data: apiKeys } = await supabase
+      .from("api_keys")
+      .select("id, name, key, permissions, last_used_at, expires_at, is_active, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
     // Mask keys for security
-    const masked = apiKeys.map((k) => ({
+    const masked = (apiKeys || []).map((k: any) => ({
       ...k,
       key: `${k.key.slice(0, 8)}...${k.key.slice(-4)}`,
     }));
@@ -37,35 +35,30 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("session")?.value;
-    if (!token) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
 
-    const { payload } = await jwtVerify(token, getJwtSecret());
     const body = await request.json();
     const { name, permissions, expiresAt } = body;
 
     if (!name) return NextResponse.json({ error: "Nom requis" }, { status: 400 });
 
-    const apiKey = await prisma.apiKey.create({
-      data: {
-        userId: payload.userId as string,
+    const { data: apiKey } = await supabase
+      .from("api_keys")
+      .insert({
+        user_id: user.id,
         name,
         key: generateApiKey(),
         permissions: permissions || null,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-      },
-    });
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      })
+      .select("id, name, key, permissions, expires_at")
+      .single();
 
-    return NextResponse.json({
-      apiKey: {
-        id: apiKey.id,
-        name: apiKey.name,
-        key: apiKey.key,
-        permissions: apiKey.permissions,
-        expiresAt: apiKey.expiresAt,
-      },
-    });
+    return NextResponse.json({ apiKey });
   } catch (error) {
     console.error("API keys POST error:", error);
     return NextResponse.json({ error: "Erreur" }, { status: 500 });
@@ -74,22 +67,22 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("session")?.value;
-    if (!token) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
 
-    const { payload } = await jwtVerify(token, getJwtSecret());
     const body = await request.json();
     const { keyId } = body;
 
     if (!keyId) return NextResponse.json({ error: "keyId requis" }, { status: 400 });
 
-    const apiKey = await prisma.apiKey.findFirst({
-      where: { id: keyId, userId: payload.userId as string },
-    });
-    if (!apiKey) return NextResponse.json({ error: "Clé API introuvable" }, { status: 404 });
-
-    await prisma.apiKey.delete({ where: { id: keyId } });
+    await supabase
+      .from("api_keys")
+      .delete()
+      .eq("id", keyId)
+      .eq("user_id", user.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

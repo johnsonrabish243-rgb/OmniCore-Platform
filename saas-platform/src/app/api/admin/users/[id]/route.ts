@@ -1,45 +1,55 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
-import { getJwtSecret } from "@/lib/auth-helpers";
+import { getCurrentUser } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
 
-async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("session")?.value;
-  if (!token) return null;
-  try {
-    const { payload } = await jwtVerify(token, getJwtSecret());
-    return await prisma.user.findUnique({ where: { id: payload.userId as string } });
-  } catch (error) { console.error("Admin [id] getCurrentUser error:", error); return null; }
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getCurrentUser();
+  if (!user || !["SUPER_ADMIN", "ADMIN"].includes(user.role)) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (!profile) {
+    return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+  }
+
+  return NextResponse.json({ user: profile });
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user || user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
+
   const { id } = await params;
   const body = await request.json();
-  const updated = await prisma.user.update({
-    where: { id },
-    data: {
-      ...(body.role && { role: body.role }),
-      ...(typeof body.isActive === "boolean" && { isActive: body.isActive }),
-      ...(body.firstName && { firstName: body.firstName }),
-      ...(body.lastName && { lastName: body.lastName }),
-    },
-    select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true },
-  });
-  return NextResponse.json({ user: updated });
-}
+  const supabase = await createClient();
 
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  const { data: updated } = await supabase
+    .from("users")
+    .update({
+      ...(body.firstName && { first_name: body.firstName }),
+      ...(body.lastName && { last_name: body.lastName }),
+      ...(body.email && { email: body.email }),
+      ...(body.role && { role: body.role }),
+      ...(body.isActive !== undefined && { is_active: body.isActive }),
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (!updated) {
+    return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
   }
-  const { id } = await params;
-  await prisma.user.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+
+  return NextResponse.json({ user: updated });
 }

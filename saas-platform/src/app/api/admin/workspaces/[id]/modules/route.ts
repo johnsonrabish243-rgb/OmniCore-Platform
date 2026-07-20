@@ -1,87 +1,54 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
 
-const ALL_MODULES = [
-  "hr", "finance", "crm", "commerce", "sales", "inventory",
-  "pharmacy", "education", "healthcare",
-  "projects", "tasks", "calendar", "messages", "documents",
-];
-
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  if (!["SUPER_ADMIN", "ADMIN"].includes(user.role)) {
+  if (!user || !["SUPER_ADMIN", "ADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
   const { id } = await params;
-  const workspace = await prisma.workspace.findUnique({ where: { id } });
-  if (!workspace) {
-    return NextResponse.json({ error: "Espace de travail introuvable" }, { status: 404 });
-  }
+  const supabase = await createClient();
 
-  const settings = typeof workspace.settings === "string"
-    ? JSON.parse(workspace.settings)
-    : (workspace.settings || {});
-  const enabledModules = settings.enabledModules || [];
+  const { data: workspace } = await supabase
+    .from("workspaces")
+    .select("settings")
+    .eq("id", id)
+    .single();
 
-  return NextResponse.json({
-    workspaceId: id,
-    enabledModules,
-    allModules: ALL_MODULES,
-  });
+  const settings = workspace?.settings || {};
+  const enabledModules = typeof settings === "object" ? (settings as any).enabledModules || [] : [];
+
+  return NextResponse.json({ enabledModules });
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  if (!["SUPER_ADMIN", "ADMIN"].includes(user.role)) {
+  if (!user || !["SUPER_ADMIN", "ADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
 
   const { id } = await params;
   const body = await request.json();
-  const { enabledModules } = body;
+  const supabase = await createClient();
 
-  if (!Array.isArray(enabledModules)) {
-    return NextResponse.json({ error: "enabledModules doit être un tableau" }, { status: 400 });
-  }
+  const { data: workspace } = await supabase
+    .from("workspaces")
+    .select("settings")
+    .eq("id", id)
+    .single();
 
-  // Validate module names
-  const invalid = enabledModules.filter((m: string) => !ALL_MODULES.includes(m));
-  if (invalid.length > 0) {
-    return NextResponse.json({ error: `Modules invalides: ${invalid.join(", ")}` }, { status: 400 });
-  }
+  const currentSettings = workspace?.settings || {};
+  const updatedSettings = {
+    ...(typeof currentSettings === "object" ? currentSettings : {}),
+    enabledModules: body.modules || [],
+  };
 
-  const workspace = await prisma.workspace.findUnique({ where: { id } });
-  if (!workspace) {
-    return NextResponse.json({ error: "Espace de travail introuvable" }, { status: 404 });
-  }
+  await supabase
+    .from("workspaces")
+    .update({ settings: updatedSettings })
+    .eq("id", id);
 
-  const existingSettings = typeof workspace.settings === "string"
-    ? JSON.parse(workspace.settings)
-    : (workspace.settings || {});
-
-  const updated = await prisma.workspace.update({
-    where: { id },
-    data: {
-      settings: {
-        ...existingSettings,
-        enabledModules,
-      },
-    },
-  });
-
-  return NextResponse.json({
-    workspaceId: id,
-    enabledModules,
-    message: "Modules mis à jour avec succès",
-  });
+  return NextResponse.json({ success: true, enabledModules: body.modules || [] });
 }

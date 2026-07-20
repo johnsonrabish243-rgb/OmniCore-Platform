@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
-import { SignJWT } from "jose";
-import { getResetJwtSecret } from "@/lib/auth-helpers";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
@@ -10,21 +8,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email requis" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return NextResponse.json({ error: "Si cet email existe, un lien de réinitialisation a été envoyé." }, { status: 200 });
+    const supabase = await createClient();
+
+    // Supabase handles the password reset flow including sending the email
+    // The redirect URL should point to our reset-password page
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://omnicore.cd";
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/fr/reset-password`,
+    });
+
+    if (error) {
+      console.error("Forgot password error:", error.message);
+      // Don't reveal if the email exists or not (security best practice)
     }
 
-    // Generate reset token (expires in 1 hour)
-    const resetToken = await new SignJWT({ userId: user.id, type: "reset" })
-      .setProtectedHeader({ alg: "HS256" })
-      .setExpirationTime("1h")
-      .sign(getResetJwtSecret());
-
-    // In production, send email with reset link
-    // Reset token is NEVER returned in the API response — only used server-side
-    // TODO: Integrate email service (SendGrid, Resend, etc.) to send the reset link
-
+    // Always return success to prevent email enumeration
     return NextResponse.json({
       message: "Si cet email existe, un lien de réinitialisation a été envoyé.",
     });

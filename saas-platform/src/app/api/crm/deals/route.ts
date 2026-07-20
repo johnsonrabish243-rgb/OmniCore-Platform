@@ -1,38 +1,36 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth-helpers";
 
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const memberships = await prisma.organizationMember.findMany({
-    where: { userId: user.id },
-    select: { organizationId: true },
-  });
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
-  const orgIds = memberships.map((m) => m.organizationId);
+  const { data: memberships } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id);
 
-  const deals = await prisma.deal.findMany({
-    where: { organizationId: { in: orgIds } },
-    include: {
-      contact: { select: { id: true, firstName: true, lastName: true, company: true } },
-      assignedTo: { select: { id: true, firstName: true, lastName: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const orgIds = memberships?.map((m) => m.organization_id) || [];
 
-  const mapped = deals.map((deal) => ({
+  const { data: deals } = await supabase
+    .from("deals")
+    .select("*, contact:contacts(id, first_name, last_name, company)")
+    .in("organization_id", orgIds)
+    .order("created_at", { ascending: false });
+
+  const mapped = (deals || []).map((deal: any) => ({
     id: deal.id,
     title: deal.title,
-    company: deal.contact?.company || deal.contact ? `${deal.contact.firstName || ""} ${deal.contact.lastName || ""}`.trim() : "Sans contact",
-    value: new Intl.NumberFormat("fr-FR", { style: "currency", currency: deal.currency }).format(Number(deal.value)),
+    company: deal.contact?.company || (deal.contact ? `${deal.contact.first_name || ""} ${deal.contact.last_name || ""}`.trim() : "Sans contact"),
+    value: new Intl.NumberFormat("fr-FR", { style: "currency", currency: deal.currency || "EUR" }).format(Number(deal.value)),
     stage: deal.stage,
     probability: deal.probability,
-    assignee: deal.assignedTo ? `${deal.assignedTo.firstName || ""} ${deal.assignedTo.lastName || ""}`.trim() : null,
-    contactId: deal.contactId,
+    contactId: deal.contact_id,
     currency: deal.currency,
-    expectedCloseDate: deal.expectedCloseDate,
+    expectedCloseDate: deal.expected_close_date,
     notes: deal.notes,
     source: deal.source,
   }));
@@ -44,6 +42,9 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
   const body = await request.json();
   const { organizationId, title, value, currency, contactId, probability, expectedCloseDate, notes, source } = body;
 
@@ -51,31 +52,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "organizationId et title requis" }, { status: 400 });
   }
 
-  // Verify user is member of this organization
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  const deal = await prisma.deal.create({
-    data: {
-      organizationId,
+  const { data: deal } = await supabase
+    .from("deals")
+    .insert({
+      organization_id: organizationId,
       title,
       value: value || 0,
       currency: currency || "EUR",
       stage: "LEAD",
       probability: probability || 0,
-      contactId: contactId || undefined,
-      expectedCloseDate: expectedCloseDate ? new Date(expectedCloseDate) : undefined,
+      contact_id: contactId || null,
+      expected_close_date: expectedCloseDate ? new Date(expectedCloseDate).toISOString() : null,
       notes,
       source,
-      createdById: user.id,
-      assignedToId: user.id,
-    },
-    include: {
-      contact: { select: { id: true, firstName: true, lastName: true, company: true } },
-    },
-  });
+      created_by_id: user.id,
+      assigned_to_id: user.id,
+    })
+    .select("*, contact:contacts(id, first_name, last_name, company)")
+    .single();
 
   return NextResponse.json({ deal });
 }
@@ -84,52 +78,43 @@ export async function PATCH(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
   const body = await request.json();
   const { id, stage, value, probability, contactId, expectedCloseDate, notes, title } = body;
-
   if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
 
-  const deal = await prisma.deal.findUnique({ where: { id } });
-  if (!deal) return NextResponse.json({ error: "Affaire introuvable" }, { status: 404 });
+  const updateData: Record<string, any> = {};
+  if (stage) updateData.stage = stage;
+  if (typeof value === "number") updateData.value = value;
+  if (typeof probability === "number") updateData.probability = probability;
+  if (contactId) updateData.contact_id = contactId;
+  if (expectedCloseDate) updateData.expected_close_date = new Date(expectedCloseDate).toISOString();
+  if (notes !== undefined) updateData.notes = notes;
+  if (title) updateData.title = title;
 
-  // Verify access
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId: deal.organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  const { data: deal } = await supabase
+    .from("deals")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
 
-  const updated = await prisma.deal.update({
-    where: { id },
-    data: {
-      ...(stage && { stage }),
-      ...(typeof value === "number" && { value }),
-      ...(typeof probability === "number" && { probability }),
-      ...(contactId && { contactId }),
-      ...(expectedCloseDate && { expectedCloseDate: new Date(expectedCloseDate) }),
-      ...(notes !== undefined && { notes }),
-      ...(title && { title }),
-    },
-  });
-
-  return NextResponse.json({ deal: updated });
+  return NextResponse.json({ deal });
 }
 
 export async function DELETE(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+
   const body = await request.json();
   const { id } = body;
   if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 });
 
-  const deal = await prisma.deal.findUnique({ where: { id } });
-  if (!deal) return NextResponse.json({ error: "Affaire introuvable" }, { status: 404 });
-
-  const membership = await prisma.organizationMember.findFirst({
-    where: { organizationId: deal.organizationId, userId: user.id },
-  });
-  if (!membership) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-
-  await prisma.deal.delete({ where: { id } });
+  await supabase.from("deals").delete().eq("id", id);
   return NextResponse.json({ success: true });
 }

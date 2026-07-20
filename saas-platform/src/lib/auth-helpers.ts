@@ -1,88 +1,108 @@
-import { jwtVerify } from "jose";
+import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
-import prisma from "@/lib/db";
 
 /**
- * Get the JWT secret for session tokens.
- * In production, NEXTAUTH_SECRET MUST be set — throws if missing.
- * In development, falls back to a dev-only default.
+ * Get the currently authenticated Supabase user.
  */
-export function getJwtSecret(): Uint8Array {
-  const raw = process.env.NEXTAUTH_SECRET;
-  if (!raw) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("NEXTAUTH_SECRET environment variable is not set — this is a critical security risk!");
-    }
-    console.warn("[DEV] NEXTAUTH_SECRET not set, using DEVELOPMENT-ONLY fallback. NEVER run in production without setting this!");
-    return new TextEncoder().encode("omnicore-development-only-fallback-key");
-  }
-  return new TextEncoder().encode(raw);
-}
-
-/**
- * Get the JWT secret for reset/invite tokens.
- * This is DERIVED from the session secret so that a reset token can NEVER
- * be used as a session token, even if both are signed with the same algorithm.
- * In production, NEXTAUTH_SECRET MUST be set.
- */
-export function getResetJwtSecret(): Uint8Array {
-  const raw = process.env.NEXTAUTH_SECRET;
-  if (!raw) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("NEXTAUTH_SECRET environment variable is not set — cannot generate reset tokens!");
-    }
-    console.warn("[DEV] NEXTAUTH_SECRET not set, using DEVELOPMENT-ONLY fallback for reset tokens.");
-    return new TextEncoder().encode("omnicore-dev-reset-secret-key-only");
-  }
-  // Use a different key derivation for reset tokens
-  return new TextEncoder().encode(raw + "__reset_token_salt__");
-}
-
-export async function getCurrentSessionPayload() {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("session")?.value;
-    if (!token) return null;
-    const { payload } = await jwtVerify(token, getJwtSecret());
-    return payload as { userId?: string; email?: string; role?: string };
-  } catch (error) {
-    console.error("getCurrentSessionPayload error:", error);
-    return null;
-  }
-}
-
 export async function getCurrentUser() {
   try {
-    const payload = await getCurrentSessionPayload();
-    if (!payload?.userId) return null;
-    return await prisma.user.findUnique({
-      where: { id: payload.userId as string },
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true },
-    });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // Fetch additional user data from the users table
+    const { data: profile } = await supabase
+      .from("users")
+      .select("id, email, first_name, last_name, role, is_active, avatar_url")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile) return null;
+
+    return {
+      id: profile.id,
+      email: profile.email,
+      firstName: profile.first_name,
+      lastName: profile.last_name,
+      role: profile.role,
+      isActive: profile.is_active,
+      avatarUrl: profile.avatar_url,
+    };
   } catch (error) {
     console.error("getCurrentUser error:", error);
     return null;
   }
 }
 
+/**
+ * Get the currently authenticated Supabase user with full session.
+ */
+export async function getCurrentSession() {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return { user: null };
+
+    // Fetch profile from users table
+    const { data: profile } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    return { user: profile || null };
+  } catch (error) {
+    console.error("getCurrentSession error:", error);
+    return { user: null };
+  }
+}
+
 export async function getActiveWorkspace() {
   try {
+    const supabase = await createClient();
     const cookieStore = await cookies();
     const activeWorkspaceId = cookieStore.get("activeWorkspace")?.value;
     if (!activeWorkspaceId) return null;
 
-    const payload = await getCurrentSessionPayload();
-    if (!payload?.userId) return null;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
 
-    const workspace = await prisma.workspace.findUnique({ where: { id: activeWorkspaceId } });
-    if (!workspace || !workspace.isActive) return null;
+    const { data: workspace } = await supabase
+      .from("workspaces")
+      .select("*")
+      .eq("id", activeWorkspaceId)
+      .single();
 
-    const membership = await prisma.organizationMember.findFirst({
-      where: { organizationId: workspace.organizationId, userId: payload.userId },
-    });
+    if (!workspace || !workspace.is_active) return null;
 
-    if (!membership && payload.role !== "SUPER_ADMIN") return null;
-    return workspace;
+    // Verify membership
+    const { data: membership } = await supabase
+      .from("organization_members")
+      .select("id")
+      .eq("organization_id", workspace.organization_id)
+      .eq("user_id", user.id)
+      .single();
+
+    // Check if user is SUPER_ADMIN (by querying their role)
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!membership && profile?.role !== "SUPER_ADMIN") return null;
+
+    // Transform to camelCase for compatibility
+    return {
+      id: workspace.id,
+      name: workspace.name,
+      slug: workspace.slug,
+      organizationId: workspace.organization_id,
+      description: workspace.description,
+      type: workspace.type,
+      settings: workspace.settings,
+      isActive: workspace.is_active,
+    };
   } catch (error) {
     console.error("getActiveWorkspace error:", error);
     return null;

@@ -1,26 +1,49 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
-import { jwtVerify } from "jose";
+import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
-import { getJwtSecret } from "@/lib/auth-helpers";
 
 export async function PUT(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("session")?.value;
-    if (!token) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    }
 
-    const { payload } = await jwtVerify(token, getJwtSecret());
     const body = await request.json();
 
     // If client requests to set an active workspace, validate membership and set cookie
     if (body.activeWorkspaceId) {
-      const workspace = await prisma.workspace.findUnique({ where: { id: body.activeWorkspaceId } });
-      if (!workspace || !workspace.isActive) return NextResponse.json({ error: "Workspace introuvable" }, { status: 404 });
+      const { data: workspace } = await supabase
+        .from("workspaces")
+        .select("*")
+        .eq("id", body.activeWorkspaceId)
+        .single();
 
-      const membership = await prisma.organizationMember.findFirst({ where: { userId: payload.userId as string, organizationId: workspace.organizationId } });
-      if (!membership && payload.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+      if (!workspace || !workspace.is_active) {
+        return NextResponse.json({ error: "Workspace introuvable" }, { status: 404 });
+      }
 
+      // Verify membership
+      const { data: membership } = await supabase
+        .from("organization_members")
+        .select("id")
+        .eq("organization_id", workspace.organization_id)
+        .eq("user_id", user.id)
+        .single();
+
+      // Check if user is SUPER_ADMIN
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (!membership && profile?.role !== "SUPER_ADMIN") {
+        return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+      }
+
+      const cookieStore = await cookies();
       cookieStore.set("activeWorkspace", body.activeWorkspaceId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -32,21 +55,42 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    const updated = await prisma.user.update({
-      where: { id: payload.userId as string },
-      data: {
-        ...(body.firstName && { firstName: body.firstName }),
-        ...(body.lastName && { lastName: body.lastName }),
-        ...(body.email && { email: body.email }),
-        ...(body.phone && { phone: body.phone }),
-        ...(body.bio && { bio: body.bio }),
-        ...(body.language && { language: body.language }),
-        ...(body.timezone && { timezone: body.timezone }),
-      },
-      select: { id: true, email: true, firstName: true, lastName: true, phone: true, bio: true, language: true },
-    });
+    // Update user profile fields
+    const updates: Record<string, any> = {};
+    if (body.firstName) updates.first_name = body.firstName;
+    if (body.lastName) updates.last_name = body.lastName;
+    if (body.email) updates.email = body.email;
+    if (body.phone) updates.phone = body.phone;
+    if (body.bio) updates.bio = body.bio;
+    if (body.language) updates.language = body.language;
+    if (body.timezone) updates.timezone = body.timezone;
 
-    return NextResponse.json({ user: updated });
+    if (Object.keys(updates).length > 0) {
+      const { data: updated } = await supabase
+        .from("users")
+        .update(updates)
+        .eq("id", user.id)
+        .select("id, email, first_name, last_name, phone, bio, language")
+        .single();
+
+      if (!updated) {
+        return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        user: {
+          id: updated.id,
+          email: updated.email,
+          firstName: updated.first_name,
+          lastName: updated.last_name,
+          phone: updated.phone,
+          bio: updated.bio,
+          language: updated.language,
+        },
+      });
+    }
+
+    return NextResponse.json({ success: true });
   } catch (err) {
     console.error('Update user error:', err);
     return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
