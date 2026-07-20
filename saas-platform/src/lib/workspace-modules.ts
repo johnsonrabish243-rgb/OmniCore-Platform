@@ -1,4 +1,3 @@
-import prisma from "@/lib/db";
 import { getCurrentUser, getActiveWorkspace } from "@/lib/auth-helpers";
 
 /**

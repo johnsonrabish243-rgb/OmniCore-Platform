@@ -22,7 +22,8 @@ export async function POST(request: Request) {
       .sign(getResetJwtSecret());
 
     // In production, send email with reset link
-    console.log(`Reset token for ${email}: ${resetToken}`);
+    // Reset token is NEVER returned in the API response — only used server-side
+    // TODO: Integrate email service (SendGrid, Resend, etc.) to send the reset link
 
     return NextResponse.json({
       message: "Si cet email existe, un lien de réinitialisation a été envoyé.",

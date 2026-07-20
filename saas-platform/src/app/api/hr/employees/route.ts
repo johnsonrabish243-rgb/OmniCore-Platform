@@ -93,8 +93,8 @@ export async function POST(request: Request) {
     .sign(getResetJwtSecret());
 
   // In production, an email should be sent to the user with the resetToken link.
-  // The token is NEVER returned in the API response — only logged server-side.
-  console.log(`[INVITE] User ${createdUser.email} (${createdUser.id}) invited with reset token (dev only log)`);
+  // The token is NEVER returned in the API response — only used server-side.
+  // TODO: Integrate email service (SendGrid, Resend, etc.) to send the invitation email
 
   const mapped = { id: createdUser.id, name: `${createdUser.firstName || ""} ${createdUser.lastName || ""}`.trim(), email: createdUser.email, role: createdUser.jobTitle, department: createdUser.department || "Non spécifié", status: "active" };
   return NextResponse.json({ employee: mapped, invite: { message: "Invitation email would be sent in production" } });

@@ -127,7 +127,7 @@ export default function HRPage() {
             const link = `${window.location.origin}/forgot-password?token=${token}`;
             setInviteLink(link);
             // Also print to console for server logs parity
-            console.log("Invite link:", link);
+            // Invite link generated (dev mode)
           } catch {
             // ignore
           }

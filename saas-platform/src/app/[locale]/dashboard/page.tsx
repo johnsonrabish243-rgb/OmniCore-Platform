@@ -14,9 +14,9 @@ import {
   Briefcase,
   BarChart3,
   Activity,
-  Sparkles,
   ArrowRight,
   LayoutDashboard,
+  Sparkles,
   UserCheck,
   Calendar,
   AlertTriangle,
@@ -975,7 +975,6 @@ function FinanceDashboard({ orgId }: { orgId: string | null }) {
 
   const totalRevenue = orders.reduce((sum: number, o: any) => sum + (parseFloat(o.total) || 0), 0);
   const pendingOrders = orders.filter((o: any) => o.status === "pending" || o.status === "processing");
-  const payrollEstimate = employees.length * 4500;
 
   if (loading) return <DashboardSkeleton />;
 
@@ -1113,6 +1112,7 @@ function InventoryDashboard({ orgId }: { orgId: string | null }) {
   const lowStock = medicines.filter((m: any) => (parseInt(m.stock) || 0) < 10);
   const totalValue = medicines.reduce((sum: number, m: any) => sum + (parseFloat(m.price) || 0) * (parseInt(m.stock) || 0), 0);
   const uniqueCategories = [...new Set(medicines.map((m: any) => m.category || m.category || "Uncategorized"))];
+
 
   if (loading) return <DashboardSkeleton />;
 

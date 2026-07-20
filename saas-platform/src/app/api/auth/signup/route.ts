@@ -1,24 +1,15 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import prisma from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth-helpers";
+import { getCurrentUser, getJwtSecret } from "@/lib/auth-helpers";
+import { cookies } from "next/headers";
+import { SignJWT } from "jose";
 
 export async function POST(request: Request) {
   try {
-    // Require authentication and admin role to create accounts
+    // Self-registration: allow creating accounts without admin auth
+    // Admins can also create accounts for others
     const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json(
-        { error: "Seuls les administrateurs peuvent créer des comptes. Veuillez vous connecter en tant qu'administrateur." },
-        { status: 401 }
-      );
-    }
-    if (!["SUPER_ADMIN", "ADMIN", "OWNER"].includes(currentUser.role)) {
-      return NextResponse.json(
-        { error: "Vous n'avez pas les droits pour créer des comptes. Contactez votre administrateur." },
-        { status: 403 }
-      );
-    }
 
     const body = await request.json();
     const { email, password, firstName, lastName, companyName, organizationId } = body;
@@ -53,9 +44,9 @@ export async function POST(request: Request) {
     // Hash password
     const passwordHash = await hash(password, 12);
 
-    // Assign role based on creator's permission
-    // Admins and super admins can set role; default to EMPLOYEE
-    const role = currentUser.role === "SUPER_ADMIN" ? (body.role || "EMPLOYEE") : "EMPLOYEE";
+    // Assign role - default to EMPLOYEE for self-registration
+    // SUPER_ADMIN creating accounts for others can set a custom role
+    const role = currentUser?.role === "SUPER_ADMIN" ? (body.role || "EMPLOYEE") : "EMPLOYEE";
 
     // Create user
     const user = await prisma.user.create({
@@ -110,8 +101,29 @@ export async function POST(request: Request) {
       }
     }
 
-    // Don't generate a session cookie — the admin creating this user
-    // should stay logged in as themselves, not as the new user.
+    // Generate session cookie for self-registration (no admin context)
+    // When an admin creates a user, skip cookie to stay logged in as admin
+    if (!currentUser) {
+      const token = await new SignJWT({
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      })
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setExpirationTime("7d")
+        .sign(getJwtSecret());
+
+      const cookieStore = await cookies();
+      cookieStore.set("session", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60,
+        path: "/",
+      });
+    }
+
     return NextResponse.json({
       user: {
         id: user.id,

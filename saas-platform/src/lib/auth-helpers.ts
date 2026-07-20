@@ -1,4 +1,4 @@
-import { jwtVerify, SignJWT } from "jose";
+import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import prisma from "@/lib/db";
 

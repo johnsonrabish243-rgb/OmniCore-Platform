@@ -4,6 +4,7 @@ import { useState, ReactNode } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { GlobalSearch } from "@/components/global-search";
+import { AIChat } from "@/components/ai-chat";
 import { cn } from "@/lib/utils";
 
 interface AppShellProps {
@@ -17,6 +18,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <>
       <GlobalSearch />
+      <AIChat />
       <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
