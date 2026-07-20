@@ -115,7 +115,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         <Menu className="h-5 w-5" />
       </Button>
 
-      {/* Breadcrumb placeholder */}
+      {/* Breadcrumb navigation */}
       <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
         <img src="/omnicore-logo.png" alt="OmniCore" className="h-5 w-5 rounded object-contain" />
         <span className="font-medium text-foreground">OmniCore</span>
