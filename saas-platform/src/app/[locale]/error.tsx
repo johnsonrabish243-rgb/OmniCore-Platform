@@ -1,36 +1,38 @@
 "use client";
 
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, Home } from "lucide-react";
+import { Link } from "@/i18n/routing";
 
-export default function Error({
-  error,
+export default function ErrorPage({
   reset,
 }: {
-  error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
-
   return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-[16px] bg-destructive/10 mb-6">
-        <AlertTriangle className="h-8 w-8 text-destructive" />
+    <div className="flex min-h-screen flex-col items-center justify-center text-center p-4">
+      <div className="flex h-20 w-20 items-center justify-center rounded-[20px] bg-destructive/10 mb-6">
+        <AlertTriangle className="h-10 w-10 text-destructive" />
       </div>
-      <h2 className="text-2xl font-bold tracking-tight mb-2">
-        Une erreur est survenue
-      </h2>
-      <p className="text-muted-foreground mb-6 max-w-md">
-        Désolé, quelque chose s&apos;est mal passé. Veuillez réessayer ou
-        contacter le support si le problème persiste.
+      <h1 className="text-3xl font-bold tracking-tight mb-2">
+        Erreur serveur
+      </h1>
+      <p className="text-muted-foreground mb-8 max-w-md">
+        Une erreur inattendue est survenue. Notre équipe technique a été
+        notifiée. Veuillez réessayer ou revenir à l&apos;accueil.
       </p>
-      <Button onClick={reset} className="gap-2">
-        <RefreshCw className="h-4 w-4" />
-        Réessayer
-      </Button>
+      <div className="flex items-center gap-4">
+        <Button onClick={reset} className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Réessayer
+        </Button>
+        <Link href="/">
+          <Button variant="outline" className="gap-2">
+            <Home className="h-4 w-4" />
+            Accueil
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }
