@@ -46,13 +46,16 @@ export function wrapAuth(auth: any, baseUrl: string, apiKey: string): any {
         );
       }
 
-      // Handle exchangeCodeForSession
+      // Handle exchangeCodeForSession → InsForge uses exchangeOAuthCode
       if (prop === "exchangeCodeForSession") {
         return async (code: string) => {
+          if (typeof (target as any).exchangeOAuthCode === "function") {
+            return await (target as any).exchangeOAuthCode(code);
+          }
           if (typeof (target as any).exchangeCodeForSession === "function") {
             return await (target as any).exchangeCodeForSession(code);
           }
-          console.warn("exchangeCodeForSession not available in InsForge SDK.");
+          console.warn("exchangeCodeForSession/exchangeOAuthCode not available in InsForge SDK.");
           return { data: { user: null, session: null }, error: null };
         };
       }

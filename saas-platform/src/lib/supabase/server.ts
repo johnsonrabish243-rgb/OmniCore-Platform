@@ -1,5 +1,4 @@
 import { createServerClient } from "@insforge/sdk/ssr";
-import { createAdminClient } from "@insforge/sdk";
 import { cookies } from "next/headers";
 import { wrapAuth } from "@/lib/create-insforge-client";
 
@@ -37,15 +36,4 @@ export async function createClient() {
     from: (table: string) => client.database.from(table),
     rpc: (fn: string, params?: any) => client.database.rpc(fn, params),
   }) as any;
-}
-
-/**
- * Create an InsForge admin client with the API key.
- * Bypasses RLS policies. ONLY use in server-side admin API routes.
- */
-export async function createServiceClient() {
-  return createAdminClient({
-    baseUrl: INSFORGE_URL,
-    apiKey: INSFORGE_API_KEY,
-  });
 }
