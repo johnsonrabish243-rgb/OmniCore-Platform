@@ -5,14 +5,13 @@
   "outputDirectory": ".next",
   "regions": ["cdg1"],
   "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@supabase_url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
+    "NEXT_PUBLIC_INSFORGE_URL": "@insforge_url",
+    "NEXT_PUBLIC_INSFORGE_ANON_KEY": "@insforge_anon_key",
+    "INSFORGE_API_KEY": "@insforge_api_key",
     "NEXT_PUBLIC_SITE_URL": "@site_url",
     "RESEND_API_KEY": "@resend_api_key",
     "OPENAI_API_KEY": "@openai_api_key",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "DATABASE_URL": "@database_url"
+    "NEXTAUTH_SECRET": "@nextauth_secret"
   },
   "headers": [
     {
@@ -25,7 +24,7 @@
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://crayonqfchcruldflvuj.supabase.co wss://crayonqfchcruldflvuj.supabase.co; frame-ancestors 'none'; form-action 'self'; base-uri 'self'"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://4majgdg3.us-east.insforge.app wss://4majgdg3.us-east.insforge.app; frame-ancestors 'none'; form-action 'self'; base-uri 'self'"
         }
       ]
     },

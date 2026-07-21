@@ -64,3 +64,21 @@ Thumbs.db
 *.db-wal
 prisma/dev.db-journal
 prisma/dev.db-wal
+
+# InsForge & AI agent skills
+.insforge
+.agent
+.agents
+.augment
+.claude
+.cline
+.github/copilot*
+.kilocode
+.qoder
+.qwen
+.roo
+.trae
+.windsurf
+
+# Scripts (one-time migration & debug scripts with credentials)
+scripts/
