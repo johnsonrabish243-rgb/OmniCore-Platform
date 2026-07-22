@@ -10,18 +10,12 @@ import {
   Shield,
   Zap,
   Globe,
-  BarChart3,
   Users,
   Building2,
   Layers,
-  Briefcase,
   ShoppingCart,
-  Package,
-  Pill,
   GraduationCap,
   Heart,
-  FileText,
-  Bell,
   Sparkles,
   Lock,
   Cloud,
@@ -29,17 +23,16 @@ import {
   MapPin,
   Phone,
   Mail,
-  ChevronDown,
   DollarSign,
-  BookOpen,
-  Activity,
-  ClipboardCheck,
   Bot,
-  Eye,
   Star,
+  CheckCircle,
+  Server,
+  Award,
+  HeadphonesIcon,
 } from "lucide-react";
 
-// Custom SVG icons
+/* ───── SVG Icons ───── */
 function SocialGithub({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -65,10 +58,9 @@ function SocialTwitter({ className }: { className?: string }) {
 }
 
 /* ───── Scroll Animation Hook ───── */
-function useScrollReveal(threshold = 0.15) {
+function useScrollReveal(threshold = 0.1) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
-
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -79,7 +71,6 @@ function useScrollReveal(threshold = 0.15) {
     observer.observe(el);
     return () => observer.disconnect();
   }, [threshold]);
-
   return { ref, visible };
 }
 
@@ -100,8 +91,19 @@ function ScrollReveal({ children, className, delay = 0 }: { children: React.Reac
   );
 }
 
+/* ───── Get locale helper ───── */
+function getLocale(): string {
+  if (typeof window === "undefined") return "fr";
+  return window.location.pathname.split("/")[1] || "fr";
+}
+
+function localePath(path: string): string {
+  const locale = getLocale();
+  return `/${locale}${path}`;
+}
+
 /* ───── Navigation ───── */
-function LandingNav({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSignIn: () => void }) {
+function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -114,8 +116,8 @@ function LandingNav({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSi
   const navLinks = [
     { label: "Fonctionnalités", href: "#features" },
     { label: "Modules", href: "#modules" },
-    { label: "À propos", href: "#about" },
-    { label: "Contact", href: "#contact" },
+    { label: "À propos", href: localePath("/about") },
+    { label: "Contact", href: localePath("/contact") },
   ];
 
   return (
@@ -129,45 +131,56 @@ function LandingNav({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSi
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 sm:h-20 items-center justify-between">
-          <div className="flex items-center gap-3">
+          {/* Logo */}
+          <a href={localePath("/")} className="flex items-center gap-3 group">
             <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 rounded-[12px] blur-sm" />
+              <div className="absolute inset-0 bg-primary/20 rounded-[12px] blur-sm group-hover:blur-md transition-all" />
               <img
                 src="/omnicore-logo.png"
-                alt="OmniCore Logo"
+                alt="OmniCore"
                 className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-[12px] object-contain shadow-sm"
               />
             </div>
             <div className="hidden sm:block">
               <span className="text-lg font-bold tracking-tight text-foreground">OmniCore</span>
               <span className="ml-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                ERP Suite
+                ERP
               </span>
             </div>
-          </div>
+          </a>
 
+          {/* Desktop Nav */}
           <div className="hidden lg:flex items-center gap-1">
             {navLinks.map((link) => (
               <a
-                key={link.href}
+                key={link.label}
                 href={link.href}
-                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-[8px] hover:bg-accent/50"
+                className={cn(
+                  "px-4 py-2 text-sm font-medium rounded-[8px] transition-all duration-200",
+                  link.href.startsWith("#")
+                    ? "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                )}
               >
                 {link.label}
               </a>
             ))}
           </div>
 
+          {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={onSignIn}>
-              Se connecter
+            <Button variant="ghost" size="sm" asChild>
+              <a href={localePath("/login")}>Se connecter</a>
             </Button>
-            <Button size="sm" onClick={onGetStarted} className="gap-1.5 shadow-lg shadow-primary/20">
-              Commencer
-              <ArrowRight className="h-3.5 w-3.5" />
+            <Button size="sm" asChild className="gap-1.5 shadow-lg shadow-primary/20">
+              <a href={localePath("/signup")}>
+                Commencer
+                <ArrowRight className="h-3.5 w-3.5" />
+              </a>
             </Button>
           </div>
 
+          {/* Mobile toggle */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="lg:hidden flex items-center justify-center h-10 w-10 rounded-[10px] hover:bg-accent transition-colors"
@@ -177,6 +190,7 @@ function LandingNav({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSi
         </div>
       </div>
 
+      {/* Mobile Menu */}
       <div
         className={cn(
           "lg:hidden transition-all duration-300 overflow-hidden",
@@ -186,7 +200,7 @@ function LandingNav({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSi
         <div className="border-t border-border/50 bg-background/95 backdrop-blur-xl px-4 py-4 space-y-1">
           {navLinks.map((link) => (
             <a
-              key={link.href}
+              key={link.label}
               href={link.href}
               onClick={() => setMobileOpen(false)}
               className="block px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground rounded-[10px] hover:bg-accent transition-colors"
@@ -195,12 +209,14 @@ function LandingNav({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSi
             </a>
           ))}
           <div className="pt-3 flex flex-col gap-2">
-            <Button variant="outline" size="sm" onClick={onSignIn} className="w-full justify-center">
-              Se connecter
+            <Button variant="outline" size="sm" asChild className="w-full justify-center">
+              <a href={localePath("/login")}>Se connecter</a>
             </Button>
-            <Button size="sm" onClick={onGetStarted} className="w-full justify-center gap-1.5">
-              Commencer
-              <ArrowRight className="h-3.5 w-3.5" />
+            <Button size="sm" asChild className="w-full justify-center gap-1.5">
+              <a href={localePath("/signup")}>
+                Commencer
+                <ArrowRight className="h-3.5 w-3.5" />
+              </a>
             </Button>
           </div>
         </div>
@@ -210,7 +226,7 @@ function LandingNav({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSi
 }
 
 /* ───── Hero Section ───── */
-function HeroSection({ onGetStarted, onSignIn }: { onGetStarted: () => void; onSignIn: () => void }) {
+function HeroSection() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const heroRef = useRef<HTMLDivElement>(null);
 
@@ -229,7 +245,8 @@ function HeroSection({ onGetStarted, onSignIn }: { onGetStarted: () => void; onS
   }, []);
 
   return (
-    <section ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 sm:pt-24">
+    <section ref={heroRef} className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-20 sm:pt-24">
+      {/* Background effects */}
       <div className="absolute inset-0 -z-10">
         <div
           className="absolute top-1/4 -right-20 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-primary/10 to-purple-500/10 blur-3xl"
@@ -239,78 +256,58 @@ function HeroSection({ onGetStarted, onSignIn }: { onGetStarted: () => void; onS
           className="absolute -bottom-20 -left-20 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-emerald-500/5 to-primary/10 blur-3xl"
           style={{ transform: `translate(${mousePos.x * -0.3}px, ${mousePos.y * -0.3}px)` }}
         />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 h-[400px] w-[800px] rounded-full bg-primary/3 blur-3xl" />
-        {/* Animated grid */}
-        <div
-          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
           style={{
             backgroundImage:
               "linear-gradient(rgba(37, 99, 235, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(37, 99, 235, 0.3) 1px, transparent 1px)",
             backgroundSize: "60px 60px",
           }}
         />
-        {/* Floating orbs */}
-        <div className="absolute top-[15%] left-[10%] h-3 w-3 rounded-full bg-primary/30 animate-pulse" style={{ animationDuration: "4s" }} />
-        <div className="absolute top-[30%] right-[15%] h-2 w-2 rounded-full bg-purple-500/30 animate-pulse" style={{ animationDuration: "3s" }} />
-        <div className="absolute bottom-[25%] left-[20%] h-2.5 w-2.5 rounded-full bg-emerald-500/20 animate-pulse" style={{ animationDuration: "5s" }} />
-        <div className="absolute bottom-[35%] right-[25%] h-3.5 w-3.5 rounded-full bg-amber-500/20 animate-pulse" style={{ animationDuration: "3.5s" }} />
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        <div className="flex flex-col items-center text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-8 animate-fade-in-up shadow-sm">
+        <div className="flex flex-col items-center text-center max-w-5xl mx-auto">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 animate-fade-in-up shadow-sm">
             <Sparkles className="h-4 w-4" />
             <span>Plateforme ERP Nouvelle Génération</span>
           </div>
 
-          <div className="mb-8 animate-fade-in-up delay-100">
-            <div className="relative inline-block">
-              <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-[28px] blur-xl" />
-              <img
-                src="/omnicore-logo.png"
-                alt="OmniCore"
-                className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-[20px] object-contain shadow-2xl ring-1 ring-border/20"
-              />
-            </div>
-          </div>
-
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight max-w-5xl animate-fade-in-up delay-200 leading-[1.1]">
+          {/* Headline */}
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] animate-fade-in-up delay-100">
             <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-              La Plateforme de Gestion
+              Gérez Votre Entreprise
             </span>
             <br />
             <span className="bg-gradient-to-r from-primary via-blue-500 to-purple-500 bg-clip-text text-transparent">
-              Intelligente pour Votre Entreprise
+              depuis une Seule Plateforme
             </span>
           </h1>
 
-          <p className="mt-6 max-w-2xl text-base sm:text-lg leading-relaxed text-muted-foreground animate-fade-in-up delay-300">
-            OmniCore est une solution ERP cloud moderne qui intègre l&apos;ensemble de vos processus métier
-            — RH, Finance, Commerce, Pharmacie, Éducation, Santé et plus — dans une plateforme unique,
-            sécurisée et intelligente.
+          {/* Description */}
+          <p className="mt-6 max-w-2xl text-base sm:text-lg leading-relaxed text-muted-foreground animate-fade-in-up delay-200">
+            OmniCore intègre RH, Finance, Pharmacie, Éducation, Commerce et plus dans un cloud ERP 
+            sécurisé, conçu pour les organisations modernes africaines et internationales.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row items-center gap-4 animate-fade-in-up delay-400">
-            <Button size="xl" onClick={onGetStarted} className="gap-2 w-full sm:w-auto shadow-xl shadow-primary/30 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary transition-all duration-300">
-              Commencer gratuitement
-              <ArrowRight className="h-5 w-5" />
-            </Button>
-            <Button variant="glass" size="xl" onClick={onSignIn} className="w-full sm:w-auto">
-              Se connecter
-            </Button>
-            <Button variant="outline" size="xl" asChild className="w-full sm:w-auto">
-              <a href="#features">
-                En savoir plus
+          {/* CTAs */}
+          <div className="mt-10 flex flex-col sm:flex-row items-center gap-4 animate-fade-in-up delay-300">
+            <Button size="xl" asChild className="gap-2 w-full sm:w-auto shadow-xl shadow-primary/30 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary transition-all duration-300">
+              <a href={localePath("/signup")}>
+                Commencer gratuitement
+                <ArrowRight className="h-5 w-5" />
               </a>
             </Button>
             <Button variant="outline" size="xl" asChild className="w-full sm:w-auto">
-              <a href="#contact">
-                Nous contacter
-              </a>
+              <a href={localePath("/contact")}>Demander une démo</a>
+            </Button>
+            <Button variant="ghost" size="xl" asChild className="w-full sm:w-auto">
+              <a href={localePath("/login")}>Se connecter</a>
             </Button>
           </div>
 
-          <div className="mt-16 w-full max-w-4xl animate-fade-in-up delay-500">
+          {/* Trust indicators */}
+          <div className="mt-16 w-full max-w-4xl animate-fade-in-up delay-400">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 border-y border-border/40 py-8">
               {[
                 { icon: Shield, label: "Sécurité Maximale", desc: "Chiffrement AES-256" },
@@ -328,200 +325,143 @@ function HeroSection({ onGetStarted, onSignIn }: { onGetStarted: () => void; onS
               ))}
             </div>
           </div>
-
-          <div className="mt-16 animate-floating">
-            <div className="flex flex-col items-center gap-2 text-muted-foreground/50">
-              <span className="text-xs font-medium uppercase tracking-widest">Découvrir</span>
-              <ChevronDown className="h-5 w-5" />
-            </div>
-          </div>
         </div>
       </div>
     </section>
   );
 }
 
-/* ───── About Section ───── */
-function AboutSection() {
+/* ───── ERP Module Cards ───── */
+const ERP_MODULES = [
+  {
+    id: "hr",
+    name: "Ressources Humaines",
+    short: "RH",
+    desc: "Gestion complète des employés, paie, congés, présences et évaluations de performance.",
+    benefits: ["Paie automatisée", "Suivi des présences", "Portail employé"],
+    icon: Users,
+    gradient: "from-blue-500 to-blue-600",
+    lightGradient: "from-blue-500/10 to-blue-600/5",
+    textColor: "text-blue-500",
+    borderColor: "border-blue-500/20",
+    href: "/signup?workspace=hr",
+  },
+  {
+    id: "finance",
+    name: "Finance & Comptabilité",
+    short: "Finance",
+    desc: "Comptabilité, budgets, facturation, suivi des dépenses et reporting financier en temps réel.",
+    benefits: ["Comptabilité intégrée", "Budgets & prévisions", "Reporting automatique"],
+    icon: DollarSign,
+    gradient: "from-emerald-500 to-emerald-600",
+    lightGradient: "from-emerald-500/10 to-emerald-600/5",
+    textColor: "text-emerald-500",
+    borderColor: "border-emerald-500/20",
+    href: "/signup?workspace=finance",
+  },
+  {
+    id: "healthcare",
+    name: "Santé & Pharmacie",
+    short: "Santé",
+    desc: "Gestion des patients, rendez-vous, médicaments, stocks pharmaceutiques et personnel médical.",
+    benefits: ["Dossier patient", "Gestion des stocks", "Alertes péremption"],
+    icon: Heart,
+    gradient: "from-rose-500 to-rose-600",
+    lightGradient: "from-rose-500/10 to-rose-600/5",
+    textColor: "text-rose-500",
+    borderColor: "border-rose-500/20",
+    href: "/signup?workspace=healthcare",
+  },
+  {
+    id: "education",
+    name: "Éducation",
+    short: "Éducation",
+    desc: "Gestion scolaire complète : étudiants, enseignants, classes, notes et emplois du temps.",
+    benefits: ["Notes & bulletins", "Emplois du temps", "Communication parents"],
+    icon: GraduationCap,
+    gradient: "from-purple-500 to-purple-600",
+    lightGradient: "from-purple-500/10 to-purple-600/5",
+    textColor: "text-purple-500",
+    borderColor: "border-purple-500/20",
+    href: "/signup?workspace=education",
+  },
+  {
+    id: "commerce",
+    name: "Commerce & Inventaire",
+    short: "Commerce",
+    desc: "Ventes, achats, gestion des stocks, entrepôts, commandes fournisseurs et catalogue produits.",
+    benefits: ["Point de vente", "Stock temps réel", "Multi-entrepôts"],
+    icon: ShoppingCart,
+    gradient: "from-amber-500 to-amber-600",
+    lightGradient: "from-amber-500/10 to-amber-600/5",
+    textColor: "text-amber-500",
+    borderColor: "border-amber-500/20",
+    href: "/signup?workspace=commerce",
+  },
+];
+
+function ModuleCard({ mod, index }: { mod: typeof ERP_MODULES[0]; index: number }) {
   return (
-    <section id="about" className="relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 left-1/4 h-[400px] w-[400px] rounded-full bg-primary/5 blur-3xl" />
-      </div>
-      <div className="mx-auto max-w-7xl">
-        <ScrollReveal>
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
-                <Building2 className="h-4 w-4" />
-                <span>À propos d&apos;OmniCore</span>
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-6">
-                Une entreprise innovante
-                <br />
-                <span className="text-primary">au cœur de l&apos;Afrique</span>
-              </h2>
-              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-6">
-                Basée à <strong>Kalemie</strong>, dans la province du <strong>Tanganyika</strong> en
-                République Démocratique du Congo, OmniCore est une startup technologique spécialisée
-                dans le développement de solutions logicielles modernes pour la gestion d&apos;entreprise.
-              </p>
-              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-6">
-                Notre mission est de démocratiser l&apos;accès aux outils de gestion performants pour
-                les organisations de toutes tailles, en proposant une plateforme ERP complète,
-                accessible, sécurisée et adaptée aux réalités locales et internationales.
-              </p>
-              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-                Nous croyons en la puissance de la technologie pour transformer les entreprises
-                africaines et les aider à rivaliser à l&apos;échelle mondiale grâce à des solutions
-                digitales intégrées et innovantes.
-              </p>
+    <ScrollReveal delay={index * 100}>
+      <div
+        className={cn(
+          "group relative overflow-hidden rounded-[20px] border p-6 sm:p-8",
+          "bg-gradient-to-br from-card to-card/80 hover:shadow-2xl hover:-translate-y-2",
+          "transition-all duration-500",
+          mod.borderColor
+        )}
+      >
+        {/* Hover gradient overlay */}
+        <div className={cn(
+          "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none",
+          "bg-gradient-to-br", mod.lightGradient
+        )} />
 
-              <div className="mt-8 flex items-start gap-4 p-5 rounded-[16px] bg-gradient-to-br from-accent/50 to-accent/30 border border-border/40 hover:shadow-md transition-all duration-300">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary">
-                  <MapPin className="h-6 w-6" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-foreground">📍 Kalemie, Tanganyika, RDC</h4>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Notre siège est situé dans la ville de Kalemie, au bord du lac Tanganyika,
-                    au cœur de la province du Tanganyika en République Démocratique du Congo.
-                  </p>
-                </div>
-              </div>
-            </div>
+        {/* Icon */}
+        <div className={cn(
+          "relative flex h-14 w-14 items-center justify-center rounded-[14px] mb-5",
+          "bg-gradient-to-br shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-300",
+          mod.gradient
+        )}>
+          <mod.icon className="h-7 w-7 text-white" />
+        </div>
 
-            <div className="relative">
-              <div className="relative aspect-[4/3] rounded-[24px] overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-purple-500/15 border border-border/30 shadow-xl group">
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <div className="flex justify-center mb-6">
-                      <div className="relative">
-                        <div className="absolute -inset-3 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-[24px] blur-lg" />
-                        <img
-                          src="/omnicore-logo.png"
-                          alt="OmniCore"
-                          className="relative h-24 w-24 rounded-[20px] object-contain shadow-lg ring-1 ring-border/20"
-                        />
-                      </div>
-                    </div>
-                    <h3 className="text-2xl font-bold">OmniCore</h3>
-                    <p className="text-muted-foreground mt-2">Innovation depuis Kalemie</p>
-                    <div className="mt-6 flex justify-center gap-3">
-                      {["RDC", "Afrique", "Monde"].map((label) => (
-                        <span
-                          key={label}
-                          className="px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary border border-primary/20"
-                        >
-                          {label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="absolute -top-20 -right-20 h-60 w-60 rounded-full bg-primary/10 blur-3xl" />
-                <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-purple-500/10 blur-3xl" />
-              </div>
-            </div>
-          </div>
-        </ScrollReveal>
-      </div>
-    </section>
-  );
-}
+        {/* Content */}
+        <div className="relative">
+          <h3 className="text-xl font-bold mb-2">{mod.name}</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-4">{mod.desc}</p>
 
-/* ───── Features (What We Do) Section ───── */
-function WhatWeDoSection() {
-  const services = [
-    { icon: Users, title: "Ressources Humaines", desc: "Gestion complète des employés, contrats, congés, paie et évaluations de performance." },
-    { icon: DollarSign, title: "Finance & Comptabilité", desc: "Comptabilité générale, budgets, facturation, suivi des dépenses et reporting financier." },
-    { icon: ClipboardCheck, title: "Paie & Payroll", desc: "Calcul automatique des salaires, cotisations sociales, fiches de paie et déclarations." },
-    { icon: Package, title: "Inventaire & Entrepôts", desc: "Suivi des stocks, gestion des entrepôts, réapprovisionnement et inventaire en temps réel." },
-    { icon: Pill, title: "Gestion Pharmacie", desc: "Médicaments, mouvements de stock, alertes de péremption et gestion des fournisseurs." },
-    { icon: GraduationCap, title: "Gestion Scolaire", desc: "Étudiants, enseignants, classes, notes, emplois du temps et communication." },
-    { icon: Heart, title: "Santé & Patients", desc: "Dossiers patients, rendez-vous, personnel médical et suivi des traitements." },
-    { icon: Briefcase, title: "CRM & Clients", desc: "Gestion de la relation client, prospects, opportunités et suivi commercial." },
-    { icon: Building2, title: "Fournisseurs & Achats", desc: "Gestion des fournisseurs, appels d'offres, bons de commande et approvisionnements." },
-    { icon: ShoppingCart, title: "Ventes & Commerce", desc: "Point de vente, commandes clients, facturation, devis et catalogue produits." },
-    { icon: BarChart3, title: "Rapports & Analytique", desc: "Tableaux de bord personnalisés, rapports détaillés et indicateurs de performance." },
-    { icon: Shield, title: "Sécurité & Contrôle", desc: "Contrôle d'accès basé sur les rôles, audit trail, conformité et protection des données." },
-    { icon: Layers, title: "Multi-Workspace", desc: "Gestion multi-organisations, espaces de travail séparés et environnements isolés." },
-    { icon: Activity, title: "Monitoring Temps Réel", desc: "Surveillance en direct des activités, alertes intelligentes et notifications." },
-    { icon: Bot, title: "Assistant IA", desc: "Intelligence artificielle intégrée avec protection contre les injections SQL, NoSQL et malwares." },
-    { icon: Globe, title: "Business Intelligence", desc: "Analyse prédictive, visualisation des données et aide à la décision stratégique." },
-  ];
+          {/* Benefits */}
+          <ul className="space-y-2 mb-6">
+            {mod.benefits.map((benefit) => (
+              <li key={benefit} className="flex items-center gap-2 text-sm">
+                <CheckCircle className={cn("h-4 w-4 shrink-0", mod.textColor)} />
+                <span className="text-muted-foreground">{benefit}</span>
+              </li>
+            ))}
+          </ul>
 
-  return (
-    <section id="features" className="relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-muted/30 overflow-hidden">
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute top-1/2 right-0 h-[500px] w-[500px] rounded-full bg-primary/3 blur-3xl" />
-      </div>
-      <div className="mx-auto max-w-7xl">
-        <ScrollReveal>
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
-              <Zap className="h-4 w-4" />
-              <span>Nos Services</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Une Solution ERP Complète
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              OmniCore intègre l&apos;ensemble de vos processus métier dans une plateforme unique,
-              connectée et intelligente.
-            </p>
-          </div>
-        </ScrollReveal>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {services.map((service, index) => (
-            <ScrollReveal key={service.title} delay={index * 50}>
-              <div
-                className="group p-5 rounded-[16px] border border-border/50 bg-card hover:bg-gradient-to-br hover:from-accent/50 hover:to-accent/30 hover:border-primary/20 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary mb-3 group-hover:bg-gradient-to-br group-hover:from-primary group-hover:to-purple-500 group-hover:text-primary-foreground transition-all duration-300 shadow-sm">
-                  <service.icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-semibold text-sm mb-1.5">{service.title}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{service.desc}</p>
-              </div>
-            </ScrollReveal>
-          ))}
+          {/* CTA */}
+          <Button asChild className={cn(
+            "w-full gap-2 transition-all duration-300",
+            "shadow-lg hover:shadow-xl",
+          )}>
+            <a href={localePath(mod.href)}>
+              Créer un espace {mod.short}
+              <ArrowRight className="h-4 w-4" />
+            </a>
+          </Button>
         </div>
       </div>
-    </section>
+    </ScrollReveal>
   );
 }
 
-/* ───── Modules Section ───── */
 function ModulesSection() {
-  const modules = [
-    { icon: Users, name: "Ressources Humaines", desc: "Gestion complète du personnel", color: "from-blue-500/10 to-blue-600/5 text-blue-500" },
-    { icon: DollarSign, name: "Finance", desc: "Gestion financière intégrée", color: "from-emerald-500/10 to-emerald-600/5 text-emerald-500" },
-    { icon: BookOpen, name: "Comptabilité", desc: "Comptabilité et reporting", color: "from-teal-500/10 to-teal-600/5 text-teal-500" },
-    { icon: Package, name: "Inventaire", desc: "Suivi des stocks en temps réel", color: "from-amber-500/10 to-amber-600/5 text-amber-500" },
-    { icon: ShoppingCart, name: "Commerce", desc: "Ventes et e-commerce", color: "from-orange-500/10 to-orange-600/5 text-orange-500" },
-    { icon: GraduationCap, name: "Gestion Scolaire", desc: "Établissements éducatifs", color: "from-purple-500/10 to-purple-600/5 text-purple-500" },
-    { icon: Pill, name: "Pharmacie", desc: "Gestion pharmaceutique", color: "from-rose-500/10 to-rose-600/5 text-rose-500" },
-    { icon: ClipboardCheck, name: "Paie", desc: "Calcul des salaires", color: "from-indigo-500/10 to-indigo-600/5 text-indigo-500" },
-    { icon: Activity, name: "Présences", desc: "Suivi des présences", color: "from-cyan-500/10 to-cyan-600/5 text-cyan-500" },
-    { icon: Building2, name: "Achats", desc: "Gestion des approvisionnements", color: "from-violet-500/10 to-violet-600/5 text-violet-500" },
-    { icon: BarChart3, name: "Ventes", desc: "Pipeline et performance", color: "from-pink-500/10 to-pink-600/5 text-pink-500" },
-    { icon: Briefcase, name: "CRM", desc: "Relation client", color: "from-sky-500/10 to-sky-600/5 text-sky-500" },
-    { icon: TrendingUp, name: "Analytique", desc: "Analyse de données", color: "from-lime-500/10 to-lime-600/5 text-lime-500" },
-    { icon: FileText, name: "Rapports", desc: "Reporting avancé", color: "from-yellow-500/10 to-yellow-600/5 text-yellow-500" },
-    { icon: Shield, name: "Administration", desc: "Gestion de la plateforme", color: "from-red-500/10 to-red-600/5 text-red-500" },
-    { icon: Eye, name: "Audit", desc: "Traçabilité complète", color: "from-gray-500/10 to-gray-600/5 text-gray-500" },
-    { icon: FileText, name: "Documents", desc: "Gestion documentaire", color: "from-stone-500/10 to-stone-600/5 text-stone-500" },
-    { icon: Bell, name: "Notifications", desc: "Alertes intelligentes", color: "from-amber-500/10 to-amber-600/5 text-amber-500" },
-    { icon: Bot, name: "Assistant IA", desc: "IA anti-malware intégrée", color: "from-fuchsia-500/10 to-fuchsia-600/5 text-fuchsia-500" },
-  ];
-
   return (
-    <section id="modules" className="relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+    <section id="modules" className="relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden bg-muted/30">
       <div className="absolute inset-0 -z-10">
-        <div className="absolute bottom-0 right-1/4 h-[400px] w-[400px] rounded-full bg-purple-500/5 blur-3xl" />
+        <div className="absolute top-0 right-1/4 h-[400px] w-[400px] rounded-full bg-primary/5 blur-3xl" />
       </div>
       <div className="mx-auto max-w-7xl">
         <ScrollReveal>
@@ -531,27 +471,17 @@ function ModulesSection() {
               <span>Modules ERP</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Tous les Modules dont Vous Avez Besoin
+              La Suite Complète pour Votre Organisation
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Une suite complète de modules interconnectés pour gérer l&apos;intégralité de votre organisation.
+              Créez votre espace de travail et commencez à gérer vos opérations en quelques clics.
             </p>
           </div>
         </ScrollReveal>
 
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {modules.map((mod, index) => (
-            <ScrollReveal key={mod.name} delay={index * 30}>
-              <div
-                className="group p-4 rounded-[14px] border border-border/40 bg-card hover:border-primary/30 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 cursor-default"
-              >
-                <div className={cn("flex h-10 w-10 items-center justify-center rounded-[10px] mb-3 group-hover:scale-110 group-hover:shadow-md transition-all duration-300 bg-gradient-to-br", mod.color)}>
-                  <mod.icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-semibold text-sm mb-1">{mod.name}</h3>
-                <p className="text-xs text-muted-foreground">{mod.desc}</p>
-              </div>
-            </ScrollReveal>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          {ERP_MODULES.map((mod, index) => (
+            <ModuleCard key={mod.id} mod={mod} index={index} />
           ))}
         </div>
       </div>
@@ -559,25 +489,19 @@ function ModulesSection() {
   );
 }
 
-/* ───── Why Choose Us Section ───── */
-function WhyChooseSection() {
+/* ───── Why OmniCore ───── */
+function WhyOmniCoreSection() {
   const benefits = [
-    { icon: Layers, title: "Plateforme ERP Intégrée", desc: "Tous vos outils métier dans une seule plateforme connectée et cohérente." },
-    { icon: Cloud, title: "Technologie Cloud Moderne", desc: "Infrastructure cloud scalable, accessible partout, à tout moment." },
-    { icon: Lock, title: "Authentification Sécurisée", desc: "JWT sécurisé, support multi-facteurs et protection contre les attaques." },
-    { icon: Shield, title: "Contrôle d'Accès par Rôle", desc: "Permissions granulaires avec des rôles prédéfinis et personnalisables." },
-    { icon: Building2, title: "Multi-Organisations", desc: "Gérez plusieurs organisations et filiales depuis un même compte." },
-    { icon: Layers, title: "Multi-Workspaces", desc: "Espaces de travail indépendants pour chaque équipe ou projet." },
-    { icon: Activity, title: "Analytique Temps Réel", desc: "Tableaux de bord dynamiques et indicateurs de performance en direct." },
-    { icon: FileText, title: "Rapports Professionnels", desc: "Générez des rapports détaillés et exportez-les en plusieurs formats." },
-    { icon: TrendingUp, title: "Architecture Évolutive", desc: "Conçue pour grandir avec votre organisation, de la PME à la multinationale." },
-    { icon: Zap, title: "Expérience Utilisateur Moderne", desc: "Interface élégante, intuitive et réactive inspirée des meilleurs standards." },
-    { icon: Globe, title: "Français & Anglais", desc: "Interface complète en français et anglais, avec support du swahili." },
-    { icon: Shield, title: "Sécurité Niveau Enterprise", desc: "Chiffrement, audit trail, sauvegardes automatisées et conformité RGPD." },
+    { icon: Cloud, title: "Cloud Natif", desc: "Infrastructure scalable, accessible 24/7 depuis n'importe où." },
+    { icon: Shield, title: "Sécurité Enterprise", desc: "Chiffrement AES-256, RBAC, audit trail et conformité RGPD." },
+    { icon: Bot, title: "Assistant IA", desc: "Intelligence artificielle intégrée pour automatiser vos tâches." },
+    { icon: Globe, title: "Multi-langue", desc: "Interface complète en français, anglais et swahili." },
+    { icon: TrendingUp, title: "Évolutif", desc: "De la PME à la multinationale, OmniCore grandit avec vous." },
+    { icon: HeadphonesIcon, title: "Support Dédié", desc: "Équipe locale disponible pour vous accompagner." },
   ];
 
   return (
-    <section className="relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-muted/30 overflow-hidden">
+    <section id="features" className="relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="mx-auto max-w-7xl">
         <ScrollReveal>
           <div className="text-center mb-16">
@@ -586,19 +510,19 @@ function WhyChooseSection() {
               <span>Pourquoi OmniCore</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Pourquoi Choisir OmniCore ?
+              Conçu pour l&apos;Excellence Opérationnelle
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Des fonctionnalités conçues pour répondre aux besoins des organisations modernes.
+              Une plateforme robuste qui combine technologie de pointe et simplicité d&apos;utilisation.
             </p>
           </div>
         </ScrollReveal>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {benefits.map((benefit, index) => (
-            <ScrollReveal key={benefit.title} delay={index * 40}>
-              <div className="flex gap-4 p-5 rounded-[16px] border border-border/40 bg-card hover:bg-gradient-to-br hover:from-accent/30 hover:to-accent/10 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary group-hover:scale-110 transition-all">
+            <ScrollReveal key={benefit.title} delay={index * 60}>
+              <div className="flex gap-4 p-5 rounded-[16px] border border-border/40 bg-card hover:bg-gradient-to-br hover:from-accent/30 hover:to-accent/10 hover:border-primary/20 hover:shadow-lg transition-all duration-300 group">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary group-hover:scale-110 group-hover:shadow-md transition-all duration-300">
                   <benefit.icon className="h-5 w-5" />
                 </div>
                 <div>
@@ -614,86 +538,90 @@ function WhyChooseSection() {
   );
 }
 
-/* ───── Location Section ───── */
-function LocationSection() {
+/* ───── Trust & Enterprise Section ───── */
+function TrustSection() {
+  const stats = [
+    { value: "99.9%", label: "Disponibilité", icon: Server },
+    { value: "256-bit", label: "Chiffrement", icon: Lock },
+    { value: "24/7", label: "Support", icon: HeadphonesIcon },
+    { value: "ISO", label: "Conformité", icon: Award },
+  ];
+
   return (
-    <section id="contact" className="relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+    <section className="relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-muted/30 overflow-hidden">
       <div className="mx-auto max-w-7xl">
         <ScrollReveal>
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
-                <MapPin className="h-4 w-4" />
-                <span>Notre Localisation</span>
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-6">
-                Basé à <span className="text-primary">Kalemie</span>,
-                <br />
-                au Cœur du Tanganyika
-              </h2>
-              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-6">
-                Notre siège social est situé dans la ville de <strong>Kalemie</strong>, chef-lieu de la
-                province du <strong>Tanganyika</strong>, en République Démocratique du Congo. Située
-                sur les rives majestueuses du lac Tanganyika, Kalemie est un carrefour stratégique
-                pour le développement économique de la région.
-              </p>
-              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-8">
-                Depuis Kalemie, nous servons des clients locaux et internationaux, démontrant que
-                l&apos;innovation technologique de classe mondiale peut émerger de toutes les régions
-                du monde.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="flex items-center gap-3 p-3 rounded-[12px] border border-border/40 bg-card hover:shadow-md transition-all">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary">
-                    <MapPin className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Adresse</p>
-                    <p className="text-sm font-medium">Kalemie, Tanganyika, RDC</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-[12px] border border-border/40 bg-card hover:shadow-md transition-all">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary">
-                    <Mail className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="text-sm font-medium">contact@omnicore.cd</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-[12px] border border-border/40 bg-card hover:shadow-md transition-all">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary">
-                    <Phone className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Téléphone</p>
-                    <p className="text-sm font-medium">+243 800 000 000</p>
-                  </div>
-                </div>
-              </div>
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
+              <Shield className="h-4 w-4" />
+              <span>Infrastructure Enterprise</span>
             </div>
-
-            <div className="relative aspect-[4/3] rounded-[24px] overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-purple-500/10 border border-border/30 shadow-xl group">
-              <div className="absolute inset-0 flex items-center justify-center p-8">
-                <div className="text-center">
-                  <div className="flex justify-center mb-4">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary group-hover:scale-110 transition-transform duration-300">
-                      <MapPin className="h-8 w-8" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold">Kalemie, Tanganyika</h3>
-                  <p className="text-muted-foreground mt-1">République Démocratique du Congo</p>
-                  <div className="mt-6 inline-flex items-center gap-2 text-sm text-muted-foreground">
-                    <Globe className="h-4 w-4" />
-                    <span>Située au bord du lac Tanganyika</span>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute -top-20 -left-20 h-60 w-60 rounded-full bg-primary/5 blur-3xl" />
-              <div className="absolute -bottom-20 -right-20 h-60 w-60 rounded-full bg-emerald-500/5 blur-3xl" />
-            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
+              Une Infrastructure de Classe Mondiale
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Déployé sur une infrastructure cloud sécurisée avec les plus hauts standards de l&apos;industrie.
+            </p>
           </div>
+        </ScrollReveal>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, index) => (
+            <ScrollReveal key={stat.label} delay={index * 80}>
+              <div className="flex flex-col items-center p-8 rounded-[20px] border border-border/40 bg-card hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                <div className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary mb-4 group-hover:scale-110 group-hover:shadow-lg transition-all duration-300">
+                  <stat.icon className="h-7 w-7" />
+                </div>
+                <span className="text-3xl font-bold tracking-tight mb-1">{stat.value}</span>
+                <span className="text-sm text-muted-foreground">{stat.label}</span>
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ───── Final CTA ───── */
+function CTASection() {
+  return (
+    <section className="relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[800px] rounded-full bg-gradient-to-br from-primary/10 via-primary/5 to-purple-500/10 blur-3xl" />
+      </div>
+      <div className="mx-auto max-w-4xl text-center">
+        <ScrollReveal>
+          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
+            <Sparkles className="h-4 w-4" />
+            <span>Prêt à Démarrer ?</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-6">
+            Créez Votre Espace de Travail
+            <br />
+            <span className="text-primary">Gratuitement</span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10">
+            Rejoignez les organisations qui modernisent leur gestion avec OmniCore.
+            Commencez gratuitement, aucun engagement.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button size="xl" asChild className="gap-2 w-full sm:w-auto shadow-xl shadow-primary/30 bg-gradient-to-r from-primary to-primary/90">
+              <a href={localePath("/signup")}>
+                Créer mon espace
+                <ArrowRight className="h-5 w-5" />
+              </a>
+            </Button>
+            <Button variant="outline" size="xl" asChild className="w-full sm:w-auto">
+              <a href={localePath("/contact")}>Contacter les ventes</a>
+            </Button>
+          </div>
+
+          <p className="mt-6 text-sm text-muted-foreground">
+            <CheckCircle className="inline h-4 w-4 mr-1 text-emerald-500" />
+            Essai gratuit de 14 jours · Sans carte bancaire · Sans engagement
+          </p>
         </ScrollReveal>
       </div>
     </section>
@@ -707,31 +635,36 @@ function Footer() {
   const quickLinks = [
     { label: "Fonctionnalités", href: "#features" },
     { label: "Modules", href: "#modules" },
-    { label: "À propos", href: "#about" },
-    { label: "Contact", href: "#contact" },
+    { label: "Tarifs", href: "#" },
     { label: "Documentation", href: "#" },
   ];
 
-  const moduleLinks = [
-    { label: "Ressources Humaines", href: "#" },
-    { label: "Finance", href: "#" },
-    { label: "Commerce", href: "#" },
-    { label: "Pharmacie", href: "#" },
-    { label: "Éducation", href: "#" },
-    { label: "Santé", href: "#" },
-    { label: "CRM", href: "#" },
+  const companyLinks = [
+    { label: "À propos", href: localePath("/about") },
+    { label: "Contact", href: localePath("/contact") },
+    { label: "Blog", href: "#" },
+    { label: "Carrières", href: "#" },
   ];
 
   const legalLinks = [
-    { label: "Politique de confidentialité", href: "#" },
-    { label: "Conditions d'utilisation", href: "#" },
-    { label: "Cookies", href: "#" },
+    { label: "Confidentialité", href: localePath("/privacy") },
+    { label: "Conditions", href: localePath("/terms") },
+    { label: "Cookies", href: localePath("/cookies") },
+  ];
+
+  const moduleLinks = [
+    { label: "Ressources Humaines", href: localePath("/signup?workspace=hr") },
+    { label: "Finance", href: localePath("/signup?workspace=finance") },
+    { label: "Santé & Pharmacie", href: localePath("/signup?workspace=healthcare") },
+    { label: "Éducation", href: localePath("/signup?workspace=education") },
+    { label: "Commerce", href: localePath("/signup?workspace=commerce") },
   ];
 
   return (
     <footer className="border-t border-border/50 bg-gradient-to-b from-background to-muted/20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
+          {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-4">
               <div className="relative">
@@ -744,12 +677,11 @@ function Footer() {
               </div>
               <span className="text-lg font-bold">OmniCore</span>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-              Plateforme ERP cloud moderne basée à Kalemie, Tanganyika,
-              République Démocratique du Congo. Solutions de gestion intégrées
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-sm mb-6">
+              Plateforme ERP cloud moderne. Solutions de gestion intégrées 
               pour les organisations de toutes tailles.
             </p>
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3">
               {[
                 { icon: SocialGithub, href: "#" },
                 { icon: SocialLinkedin, href: "#" },
@@ -767,8 +699,9 @@ function Footer() {
             </div>
           </div>
 
+          {/* Quick Links */}
           <div>
-            <h4 className="font-semibold text-sm mb-4">Liens rapides</h4>
+            <h4 className="font-semibold text-sm mb-4">Liens</h4>
             <ul className="space-y-2.5">
               {quickLinks.map((link) => (
                 <li key={link.label}>
@@ -780,10 +713,11 @@ function Footer() {
             </ul>
           </div>
 
+          {/* Company */}
           <div>
-            <h4 className="font-semibold text-sm mb-4">Modules ERP</h4>
+            <h4 className="font-semibold text-sm mb-4">Entreprise</h4>
             <ul className="space-y-2.5">
-              {moduleLinks.map((link) => (
+              {companyLinks.map((link) => (
                 <li key={link.label}>
                   <a href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                     {link.label}
@@ -793,6 +727,7 @@ function Footer() {
             </ul>
           </div>
 
+          {/* Legal + Contact */}
           <div>
             <h4 className="font-semibold text-sm mb-4">Informations</h4>
             <ul className="space-y-2.5">
@@ -819,13 +754,18 @@ function Footer() {
           </div>
         </div>
 
+        {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground">
             &copy; {currentYear} OmniCore. Développé par John Mocket. Tous droits réservés.
           </p>
-          <p className="text-xs text-muted-foreground">
-            Version 1.0.0
-          </p>
+          <div className="flex flex-wrap gap-4">
+            {moduleLinks.slice(0, 3).map((link) => (
+              <a key={link.label} href={link.href} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                {link.label}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </footer>
@@ -836,25 +776,17 @@ function Footer() {
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
-      <LandingNav
-        onGetStarted={() => window.location.href = `/${window.location.pathname.split("/")[1] || "fr"}/signup`}
-        onSignIn={() => window.location.href = `/${window.location.pathname.split("/")[1] || "fr"}/login`}
-      />
+      <LandingNav />
 
-      <HeroSection
-        onGetStarted={() => window.location.href = `/${window.location.pathname.split("/")[1] || "fr"}/signup`}
-        onSignIn={() => window.location.href = `/${window.location.pathname.split("/")[1] || "fr"}/login`}
-      />
-
-      <AboutSection />
-
-      <WhatWeDoSection />
+      <HeroSection />
 
       <ModulesSection />
 
-      <WhyChooseSection />
+      <WhyOmniCoreSection />
 
-      <LocationSection />
+      <TrustSection />
+
+      <CTASection />
 
       <Footer />
     </div>
