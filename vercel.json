@@ -1,7 +1,6 @@
 {
   "framework": "nextjs",
   "rootDirectory": "saas-platform",
-  "regions": ["cdg1"],
   "headers": [
     {
       "source": "/(.*)",
