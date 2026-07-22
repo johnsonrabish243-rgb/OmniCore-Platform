@@ -10,11 +10,6 @@ const nextConfig: NextConfig = {
   // Compress responses
   compress: true,
 
-  // Turbopack config (used in dev)
-  turbopack: {
-    root: process.cwd(),
-  },
-
   // Production source maps (disabled for faster builds, enable for debugging)
   productionBrowserSourceMaps: false,
 
