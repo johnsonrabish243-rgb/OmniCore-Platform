@@ -114,7 +114,7 @@ function LandingNav() {
   }, []);
 
   const navLinks = [
-    { label: "Fonctionnalités", href: "#features" },
+    { label: "Fonctionnalités", href: localePath("/features") },
     { label: "Modules", href: "#modules" },
     { label: "À propos", href: localePath("/about") },
     { label: "Contact", href: localePath("/contact") },
@@ -633,17 +633,16 @@ function Footer() {
   const currentYear = new Date().getFullYear();
 
   const quickLinks = [
-    { label: "Fonctionnalités", href: "#features" },
+    { label: "Fonctionnalités", href: localePath("/features") },
     { label: "Modules", href: "#modules" },
-    { label: "Tarifs", href: "#" },
+    { label: "Tarifs", href: localePath("/pricing") },
     { label: "Documentation", href: "#" },
   ];
 
   const companyLinks = [
     { label: "À propos", href: localePath("/about") },
     { label: "Contact", href: localePath("/contact") },
-    { label: "Blog", href: "#" },
-    { label: "Carrières", href: "#" },
+    { label: "Tarifs", href: localePath("/pricing") },
   ];
 
   const legalLinks = [

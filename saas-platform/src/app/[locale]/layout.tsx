@@ -17,6 +17,17 @@ const AUTH_PATHS = [
   "/magic-link",
 ];
 
+// Public marketing pages that should NOT show the sidebar/AppShell
+const PUBLIC_PAGES = [
+  "/about",
+  "/contact",
+  "/features",
+  "/pricing",
+  "/privacy",
+  "/terms",
+  "/cookies",
+];
+
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "app" });
@@ -119,9 +130,10 @@ export default async function LocaleLayout({
 
   const isAuthPage = AUTH_PATHS.some((p) => path === p || path.startsWith(p + "/"));
   const isLandingPage = path === "/";
+  const isPublicPage = PUBLIC_PAGES.some((p) => path === p || path.startsWith(p + "/"));
 
   // Wrap both auth/landing pages and dashboard pages with InitialLoading
-  if (isAuthPage || isLandingPage) {
+  if (isAuthPage || isLandingPage || isPublicPage) {
     return (
       <Providers locale={locale} messages={messages}>
         <InitialLoading>

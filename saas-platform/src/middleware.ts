@@ -14,6 +14,17 @@ const publicPaths = [
   "/magic-link",
 ];
 
+// Marketing pages accessible to everyone (auth or not)
+const marketingPaths = [
+  "/about",
+  "/contact",
+  "/features",
+  "/pricing",
+  "/privacy",
+  "/terms",
+  "/cookies",
+];
+
 const landingPaths = ["/"];
 
 const protectedPaths = [
@@ -61,6 +72,11 @@ function isPublic(pathname: string): boolean {
   );
 }
 
+function isMarketing(pathname: string): boolean {
+  const { path } = getPathWithoutLocale(pathname);
+  return marketingPaths.some((p) => path === p || path.startsWith(p + "/"));
+}
+
 function isLanding(pathname: string): boolean {
   const { path } = getPathWithoutLocale(pathname);
   return landingPaths.some((p) => path === p);
@@ -96,6 +112,13 @@ export default async function middleware(request: NextRequest) {
   // Authenticated user visiting auth pages (login, signup) → redirect to dashboard
   if (user && isPublic(pathname)) {
     return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
+  }
+
+  // Marketing pages: always accessible (no redirect for auth users)
+  if (isMarketing(pathname)) {
+    const response = await intlMiddleware(request);
+    response.headers.set("x-pathname", pathname);
+    return response;
   }
 
   // Unauthenticated user visiting protected page → redirect to landing
