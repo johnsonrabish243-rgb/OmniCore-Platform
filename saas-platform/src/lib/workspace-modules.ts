@@ -26,24 +26,6 @@ export async function isModuleEnabled(moduleId: string): Promise<boolean> {
 
   return enabledModules.includes(moduleId);
 }
-
-/**
- * Returns the list of enabled module IDs for the current workspace, or all if none configured.
- */
-export async function getEnabledModules(): Promise<string[]> {
-  const user = await getCurrentUser();
-  if (!user) return [];
-
-  const activeWorkspace = await getActiveWorkspace();
-  if (!activeWorkspace) return [];
-
-  const settings = typeof activeWorkspace.settings === "string"
-    ? JSON.parse(activeWorkspace.settings)
-    : (activeWorkspace.settings || {});
-
-  return settings.enabledModules || [];
-}
-
 /**
  * Middleware-like validation for API routes.
  * Returns an error response object if the module is disabled.

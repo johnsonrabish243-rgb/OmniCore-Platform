@@ -33,30 +33,6 @@ export async function getCurrentUser() {
     return null;
   }
 }
-
-/**
- * Get the currently authenticated Supabase user with full session.
- */
-export async function getCurrentSession() {
-  try {
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) return { user: null };
-
-    // Fetch profile from users table
-    const { data: profile } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    return { user: profile || null };
-  } catch (error) {
-    console.error("getCurrentSession error:", error);
-    return { user: null };
-  }
-}
-
 export async function getActiveWorkspace() {
   try {
     const supabase = await createClient();
@@ -107,13 +83,4 @@ export async function getActiveWorkspace() {
     console.error("getActiveWorkspace error:", error);
     return null;
   }
-}
-
-export function requireRole(...roles: string[]) {
-  return async () => {
-    const user = await getCurrentUser();
-    if (!user) return { error: "Non authentifié", status: 401 };
-    if (!roles.includes(user.role)) return { error: "Non autorisé", status: 403 };
-    return { user };
-  };
 }

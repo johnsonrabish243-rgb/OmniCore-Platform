@@ -9,61 +9,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Format a date string relative to now
- */
-export function formatRelativeTime(date: Date | string): string {
-  const now = new Date();
-  const then = typeof date === "string" ? new Date(date) : date;
-  const diffMs = now.getTime() - then.getTime();
-  const diffSecs = Math.floor(diffMs / 1000);
-  const diffMins = Math.floor(diffSecs / 60);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffSecs < 60) return "il y a quelques secondes";
-  if (diffMins < 60) return `il y a ${diffMins} min`;
-  if (diffHours < 24) return `il y a ${diffHours}h`;
-  if (diffDays < 7) return `il y a ${diffDays} jours`;
-  return then.toLocaleDateString("fr-FR");
-}
-
-/**
- * Format currency
- */
-export function formatCurrency(
-  amount: number,
-  currency: string = "EUR"
-): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency,
-  }).format(amount);
-}
-
-/**
- * Format number with abbreviations (K, M, B)
- */
-export function formatNumber(num: number): string {
-  if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(1)}B`;
-  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
-  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
-  return num.toString();
-}
-
-/**
  * Generate an avatar URL from a name
  */
 export function getAvatarUrl(name: string, size: number = 40): string {
   const encoded = encodeURIComponent(name);
   return `https://ui-avatars.com/api/?name=${encoded}&background=2563EB&color=fff&size=${size}&bold=true`;
-}
-
-/**
- * Truncate text with ellipsis
- */
-export function truncate(str: string, length: number = 100): string {
-  if (str.length <= length) return str;
-  return str.slice(0, length) + "...";
 }
 
 /**

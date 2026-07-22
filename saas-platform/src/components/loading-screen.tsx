@@ -105,20 +105,3 @@ export function LoadingScreen({ message, minimal = false }: LoadingScreenProps) 
   );
 }
 
-/**
- * Hook to manage loading state with auto-completion.
- */
-export function useLoading() {
-  const [isLoading, setIsLoading] = useState(true);
-
-  const done = () => setIsLoading(false);
-  const start = () => setIsLoading(true);
-
-  return {
-    isLoading,
-    LoadingComponent: ({ message }: { message?: string }) =>
-      isLoading ? <LoadingScreen message={message} /> : null,
-    done,
-    start,
-  };
-}
