@@ -82,3 +82,4 @@ prisma/dev.db-wal
 
 # Scripts (one-time migration & debug scripts with credentials)
 scripts/
+nul

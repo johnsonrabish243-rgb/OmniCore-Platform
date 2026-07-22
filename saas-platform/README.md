@@ -1,51 +1,192 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OmniCore ERP — Intelligent Workspace Platform
 
-## Getting Started
+**OmniCore** est une plateforme SaaS d'entreprise modulaire qui centralise la gestion des RH, Finance, CRM, Commerce, Pharmacie, Éducation, Santé et plus encore dans un seul espace de travail intelligent.
 
-First, run the development server:
+---
+
+## 🚀 Tech Stack
+
+| Layer        | Technology                        |
+| ------------ | --------------------------------- |
+| **Frontend** | Next.js 16 (React 19, TypeScript) |
+| **Styling**  | Tailwind CSS 4 + CSS Variables    |
+| **Backend**  | InsForge (PostgreSQL + Auth)      |
+| **Auth**     | InsForge Auth (Supabase-compatible) |
+| **i18n**     | next-intl (fr, en, sw)            |
+| **UI**       | Radix UI primitives + Framer Motion |
+| **Charts**   | Recharts                          |
+| **Font**     | Geist (Vercel)                    |
+
+---
+
+## 📦 Prerequisites
+
+- Node.js >= 18
+- npm
+- An **InsForge** project (backend)
+
+---
+
+## 🛠️ Local Development
+
+### 1. Clone & install
+
+```bash
+cd saas-platform
+npm install
+```
+
+### 2. Set up environment variables
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and fill in your InsForge credentials:
+
+```env
+NEXT_PUBLIC_INSFORGE_URL=https://your-app-key.region.insforge.app
+NEXT_PUBLIC_INSFORGE_ANON_KEY=anon_your_anon_key_here
+INSFORGE_API_KEY=ik_your_api_key_here
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+### 3. Start the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚢 Vercel Deployment
 
-## Learn More
+### Step 1: Push to Git
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+git add .
+git commit -m "Ready for deployment"
+git push origin master
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Step 2: Import to Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Go to [vercel.com/new](https://vercel.com/new)
+2. Import your Git repository
+3. Configure the project:
 
-## Deploy on Vercel
+| Setting          | Value                            |
+| ---------------- | -------------------------------- |
+| **Root Directory** | `saas-platform`                |
+| **Framework**    | Next.js (auto-detected)          |
+| **Build Command** | `npx next build`                |
+| **Output Dir**   | `.next`                          |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+> **Note:** A `vercel.json` file is included in `saas-platform/` for automatic tech stack detection.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Step 3: Set Environment Variables
 
-## Configuration
+In the Vercel Dashboard → Settings → Environment Variables, add:
 
-This project is configured for Vercel deployment with the following settings:
-- **Root Directory:** `saas-platform/`
-- **Framework:** Next.js
-- **Build Command:** `next build`
-- **Runtime:** Node.js
+| Name                         | Value / Source                          |
+| ---------------------------- | --------------------------------------- |
+| `NEXT_PUBLIC_INSFORGE_URL`   | `https://4majgdg3.us-east.insforge.app` |
+| `NEXT_PUBLIC_INSFORGE_ANON_KEY` | Your InsForge anon key               |
+| `INSFORGE_API_KEY`           | Your InsForge API key                   |
+| `NEXTAUTH_SECRET`            | `openssl rand -base64 32` output        |
+| `NEXT_PUBLIC_SITE_URL`       | `https://your-domain.vercel.app`        |
+| `OPENAI_API_KEY`             | Your OpenAI API key (optional)          |
+| `RESEND_API_KEY`             | Your Resend API key (optional)          |
 
-Required environment variables in Vercel Dashboard:
-- `NEXT_PUBLIC_INSFORGE_URL` - Backend API URL
-- `NEXT_PUBLIC_INSFORGE_ANON_KEY` - Public anonymous key
-- `INSFORGE_API_KEY` - Server API key
-- `NEXT_PUBLIC_SITE_URL` - Site URL
-- `OPENAI_API_KEY` - OpenAI API key
+### Step 4: Deploy
+
+Vercel will automatically detect the Next.js framework and deploy.
+
+---
+
+## 🗄️ Database (InsForge)
+
+This project uses **InsForge** as its backend. The database is PostgreSQL with Row-Level Security (RLS).
+
+### Check project status
+
+```bash
+cd saas-platform
+npx insforge projects get
+```
+
+### List tables
+
+```bash
+npx insforge db tables
+```
+
+### Run migrations (fresh DB only)
+
+Migrations are in `supabase/migrations/`. The current DB already has all migrations applied (confirmed via `_migrations` table). For a fresh DB, apply via:
+
+```bash
+npx insforge db import supabase/migrations/00001_initial_schema.sql
+npx insforge db import supabase/migrations/00002_rls_policies_and_triggers.sql
+```
+
+---
+
+## 📁 Project Structure
+
+```
+saas-platform/
+├── src/
+│   ├── app/
+│   │   ├── [locale]/          # Internationalized pages
+│   │   ├── api/                # API routes (auth, admin, modules)
+│   │   ├── layout.tsx          # Root layout
+│   │   ├── page.tsx            # Landing page
+│   │   └── globals.css         # Global styles + theme
+│   ├── components/
+│   │   ├── ui/                 # Radix UI primitives
+│   │   └── *.tsx               # App components
+│   ├── i18n/                   # Internationalization
+│   ├── lib/
+│   │   ├── supabase/           # InsForge SDK config
+│   │   └── *.ts                # Utilities
+│   └── middleware.ts           # Auth + i18n middleware
+├── supabase/migrations/        # Database migrations
+├── .env                        # Local env vars (git-ignored)
+├── .env.example                # Template for .env
+├── next.config.ts              # Next.js configuration
+├── vercel.json                 # Vercel deployment config
+└── package.json
+```
+
+---
+
+## 🌐 Internationalization
+
+Supported locales: **fr** (default), **en**, **sw**
+
+- Translations are in `messages/{locale}.json`
+- Locale routing is handled by `next-intl`
+
+---
+
+## 🧪 Commands
+
+| Command           | Description          |
+| ----------------- | -------------------- |
+| `npm run dev`     | Start dev server     |
+| `npm run build`   | Production build     |
+| `npm run start`   | Start production     |
+| `npm run lint`    | Run ESLint           |
+
+---
+
+## 📄 Environment Variables
+
+See `.env.example` for all required and optional environment variables.
+
+---
+
+Built with ❤️ in **Kalemie, Tanganyika, RDC**

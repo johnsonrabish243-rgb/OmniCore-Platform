@@ -48,16 +48,19 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
+  // Apply wrapAuth BEFORE calling auth methods to map getUser → getCurrentUser
+  const wrappedAuth = wrapAuth(supabase.auth, INSFORGE_URL, INSFORGE_API_KEY);
+
   const {
     data: { user },
-  } = await (supabase.auth as any).getUser();
+  } = await wrappedAuth.getUser();
 
   // Return Supabase-compatible interface
   return {
     supabaseResponse: response,
     user,
     supabase: Object.assign(supabase, {
-      auth: wrapAuth(supabase.auth, INSFORGE_URL, INSFORGE_API_KEY),
+      auth: wrappedAuth,
       from: (table: string) => supabase.database.from(table),
       rpc: (fn: string, params?: any) => supabase.database.rpc(fn, params),
     }),
