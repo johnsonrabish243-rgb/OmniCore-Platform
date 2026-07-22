@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
   "rootDirectory": "saas-platform",
-  "buildCommand": "npx next build",
+  "buildCommand": "next build",
   "installCommand": "npm install",
   "outputDirectory": ".next",
   "regions": ["cdg1"],

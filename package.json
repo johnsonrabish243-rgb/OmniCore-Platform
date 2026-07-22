@@ -6,7 +6,6 @@
     "build": "cd saas-platform && npm run build",
     "dev": "cd saas-platform && npm run dev",
     "start": "cd saas-platform && npm run start",
-    "lint": "cd saas-platform && npm run lint",
-    "vercel-build": "cd saas-platform && npm run build"
+    "lint": "cd saas-platform && npm run lint"
   }
 }
