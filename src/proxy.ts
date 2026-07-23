@@ -87,10 +87,10 @@ function isProtected(pathname: string): boolean {
   return protectedPaths.some((p) => path === p || path.startsWith(p + "/"));
 }
 
-export default async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for static assets and API routes
+  // Skip for static assets and API routes
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
