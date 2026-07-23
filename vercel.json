@@ -1,8 +1,6 @@
 {
   "framework": "nextjs",
-  "nodeVersion": "20.x",
-  "installCommand": "npm install",
-  "buildCommand": "next build",
+  "rootDirectory": ".",
   "headers": [
     {
       "source": "/(.*)",
