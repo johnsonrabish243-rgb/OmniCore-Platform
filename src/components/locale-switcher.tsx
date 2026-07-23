@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/routing";
 import { Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,14 +12,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTransition } from "react";
 
-const locales = [
-  { code: "fr", label: "Français", flag: "🇫🇷" },
-  { code: "en", label: "English", flag: "🇬🇧" },
-  { code: "sw", label: "Kiswahili", flag: "🇰🇪" },
-];
-
 export function LocaleSwitcher() {
   const locale = useLocale();
+  const t = useTranslations("locale");
+
+  const locales = [
+    { code: "fr", label: t("french"), flag: "🇫🇷" },
+    { code: "en", label: t("english"), flag: "🇬🇧" },
+    { code: "sw", label: t("swahili"), flag: "🇰🇪" },
+  ];
   const pathname = usePathname();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -37,7 +38,7 @@ export function LocaleSwitcher() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon-sm" disabled={isPending}>
           <Languages className="h-4 w-4" />
-          <span className="sr-only">Changer de langue</span>
+          <span className="sr-only">{t('changeLanguage')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">

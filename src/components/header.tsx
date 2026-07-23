@@ -51,7 +51,7 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const t = useTranslations();
+  const t = useTranslations("header");
   const router = useRouter();
   const [showSearch, setShowSearch] = useState(false);
   const [session, setSession] = useState<SessionData["user"]>(null);
@@ -98,7 +98,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   const displayName = session
     ? [session.firstName, session.lastName].filter(Boolean).join(" ") || session.email
-    : "Chargement...";
+    : t('loading');
   const initials = session
     ? ((session.firstName?.[0] || "") + (session.lastName?.[0] || "")).toUpperCase() || "?"
     : "?";
@@ -117,8 +117,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       {/* Breadcrumb navigation */}
       <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
-        <img src="/omnicore-logo.png" alt="OmniCore" className="h-5 w-5 rounded object-contain" />
-        <span className="font-medium text-foreground">OmniCore</span>
+        <img src="/omnicore-logo.png" alt="OmniCore" className="h-5 w-5 rounded object-contain" />          <span className="font-medium text-foreground">OmniCore</span>
         {session?.activeWorkspace && (
           <>
             <span className="text-muted-foreground/50">/</span>
@@ -136,7 +135,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         className="hidden md:flex items-center gap-2 rounded-[10px] border border-border/60 bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted transition-all duration-200 w-56 lg:w-72"
       >
         <Search className="h-4 w-4" />
-        <span className="flex-1 text-left">Rechercher...</span>
+        <span className="flex-1 text-left">{t('searchPlaceholder')}</span>
         <kbd className="hidden lg:inline-flex h-5 items-center gap-1 rounded-[6px] border border-border/50 bg-background px-1.5 text-[10px] font-medium text-muted-foreground">
           <Command className="h-3 w-3" />K
         </kbd>
@@ -160,12 +159,12 @@ export function Header({ onMenuClick }: HeaderProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('notifications')}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <div className="max-h-72 overflow-auto">
               {notifications.length === 0 ? (
                 <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Aucune notification
+                  {t('noNotifications')}
                 </div>
               ) : (
                 notifications.slice(0, 5).map((notif: any) => (
@@ -179,7 +178,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuSeparator />
             <a href="/notifications">
               <DropdownMenuItem className="justify-center text-sm font-medium text-primary">
-                Voir toutes les notifications
+                {t('viewAllNotifications')}
               </DropdownMenuItem>
             </a>
           </DropdownMenuContent>
@@ -212,19 +211,19 @@ export function Header({ onMenuClick }: HeaderProps) {
             <a href="/profile">
               <DropdownMenuItem>
                 <User className="h-4 w-4 mr-2" />
-                Profil
+                {t('profile')}
               </DropdownMenuItem>
             </a>
             <a href="/settings">
               <DropdownMenuItem>
                 <Settings className="h-4 w-4 mr-2" />
-                Paramètres
+                {t('settings')}
               </DropdownMenuItem>
             </a>
             <a href="/help">
               <DropdownMenuItem>
                 <HelpCircle className="h-4 w-4 mr-2" />
-                Aide
+                {t('help')}
               </DropdownMenuItem>
             </a>
             <DropdownMenuSeparator />
@@ -234,7 +233,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               disabled={isLoggingOut}
             >
               <LogOut className="h-4 w-4 mr-2" />
-              {isLoggingOut ? "Déconnexion..." : "Déconnexion"}
+              {isLoggingOut ? t('loggingOut') : t('logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

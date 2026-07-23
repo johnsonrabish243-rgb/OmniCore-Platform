@@ -28,7 +28,7 @@ export default function LoginPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("message") === "account_created") {
-      setSuccessMessage("Compte créé avec succès. Connectez-vous pour continuer.");
+      setSuccessMessage(t("accountCreated"));
       // Clean up the URL
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -49,7 +49,7 @@ export default function LoginPage() {
 
       if (signInError) {
         console.error('Login error:', signInError.message);
-        setError('Email ou mot de passe incorrect.');
+        setError(t('invalidCredentials'));
         return;
       }
 
@@ -58,7 +58,7 @@ export default function LoginPage() {
       window.location.href = `/${locale}/workspaces`;
     } catch (err) {
       console.error('Login error:', err);
-      setError('Erreur de connexion au serveur');
+      setError(t('loginError'));
     } finally {
       setIsLoading(false);
     }

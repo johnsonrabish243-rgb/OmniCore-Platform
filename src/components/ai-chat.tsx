@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -26,14 +27,14 @@ interface AIChatProps {
 export function AIChat({
   position = "bottom-right",
 }: AIChatProps) {
+  const t = useTranslations("ai");
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
-      content:
-        "Bonjour ! Je suis votre assistant OmniCore AI. Comment puis-je vous aider aujourd'hui ?",
+      content: t("welcomeMessage"),
     },
   ]);
   const [input, setInput] = useState("");
@@ -115,7 +116,7 @@ export function AIChat({
           {
             id: `error-${Date.now()}`,
             role: "assistant",
-            content: "Désolé, une erreur est survenue. Veuillez réessayer.",
+            content: t("errorMessage"),
           },
         ]);
       } finally {
@@ -127,10 +128,10 @@ export function AIChat({
 
   // Quick action buttons
   const quickActions = [
-    { label: "📊 Tableau de bord", prompt: "Comment lire mon tableau de bord ?" },
-    { label: "👥 RH", prompt: "Comment ajouter un employé ?" },
-    { label: "💰 Facturation", prompt: "Comment créer une facture ?" },
-    { label: "📦 Stock", prompt: "Comment gérer mon stock ?" },
+    { label: t("quickActionDashboard"), prompt: t("quickActionDashboardPrompt") },
+    { label: t("quickActionHR"), prompt: t("quickActionHRPrompt") },
+    { label: t("quickActionInvoicing"), prompt: t("quickActionInvoicingPrompt") },
+    { label: t("quickActionStock"), prompt: t("quickActionStockPrompt") },
   ];
 
   return (
@@ -172,8 +173,8 @@ export function AIChat({
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold">OmniCore AI</h3>
-                <p className="text-[10px] text-white/70">Assistant intelligent</p>
+                <h3 className="text-sm font-semibold">{t("assistantTitle")}</h3>
+                <p className="text-[10px] text-white/70">{t("assistantSubtitle")}</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -241,7 +242,7 @@ export function AIChat({
                     <div className="rounded-[14px] px-3.5 py-2.5 bg-muted/50 border border-border/30">
                       <div className="flex items-center gap-1.5">
                         <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">Réflexion...</span>
+                        <span className="text-xs text-muted-foreground">{t("thinking")}</span>
                       </div>
                     </div>
                   </div>
@@ -254,7 +255,7 @@ export function AIChat({
               {messages.length <= 1 && (
                 <div className="px-4 pb-2">
                   <p className="text-[10px] text-muted-foreground mb-2 uppercase tracking-wider font-medium">
-                    Actions rapides
+                    {t("quickActions")}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {quickActions.map((action) => (
@@ -280,7 +281,7 @@ export function AIChat({
                     ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Posez votre question..."
+                    placeholder={t("inputPlaceholder")}
                     className="flex-1 h-9 text-sm rounded-[10px] border-border/50"
                     disabled={isLoading}
                   />
@@ -298,7 +299,7 @@ export function AIChat({
                   </Button>
                 </form>
                 <p className="text-[9px] text-muted-foreground/50 text-center mt-1.5">
-                  Propulsé par IA · Les réponses sont générées par un modèle de langage
+                  {t("footer")}
                 </p>
               </div>
             </div>

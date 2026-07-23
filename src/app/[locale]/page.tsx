@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 import {
   ArrowRight,
   Menu,
@@ -104,6 +105,7 @@ function localePath(path: string): string {
 
 /* ───── Navigation ───── */
 function LandingNav() {
+  const t = useTranslations("landing");
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -114,10 +116,10 @@ function LandingNav() {
   }, []);
 
   const navLinks = [
-    { label: "Fonctionnalités", href: localePath("/features") },
-    { label: "Modules", href: "#modules" },
-    { label: "À propos", href: localePath("/about") },
-    { label: "Contact", href: localePath("/contact") },
+    { label: t("navFeatures"), href: localePath("/features") },
+    { label: t("navModules"), href: "#modules" },
+    { label: t("navAbout"), href: localePath("/about") },
+    { label: t("navContact"), href: localePath("/contact") },
   ];
 
   return (
@@ -170,11 +172,11 @@ function LandingNav() {
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
-              <a href={localePath("/login")}>Se connecter</a>
+              <a href={localePath("/login")}>{t("signIn")}</a>
             </Button>
             <Button size="sm" asChild className="gap-1.5 shadow-lg shadow-primary/20">
               <a href={localePath("/signup")}>
-                Commencer
+                {t("getStarted")}
                 <ArrowRight className="h-3.5 w-3.5" />
               </a>
             </Button>
@@ -210,11 +212,11 @@ function LandingNav() {
           ))}
           <div className="pt-3 flex flex-col gap-2">
             <Button variant="outline" size="sm" asChild className="w-full justify-center">
-              <a href={localePath("/login")}>Se connecter</a>
+              <a href={localePath("/login")}>{t("signIn")}</a>
             </Button>
             <Button size="sm" asChild className="w-full justify-center gap-1.5">
               <a href={localePath("/signup")}>
-                Commencer
+                {t("getStarted")}
                 <ArrowRight className="h-3.5 w-3.5" />
               </a>
             </Button>
@@ -227,6 +229,7 @@ function LandingNav() {
 
 /* ───── Hero Section ───── */
 function HeroSection() {
+  const t = useTranslations("landing");
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const heroRef = useRef<HTMLDivElement>(null);
 
@@ -270,39 +273,38 @@ function HeroSection() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 animate-fade-in-up shadow-sm">
             <Sparkles className="h-4 w-4" />
-            <span>Plateforme ERP Nouvelle Génération</span>
+            <span>{t('heroBadge')}</span>
           </div>
 
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] animate-fade-in-up delay-100">
             <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-              Gérez Votre Entreprise
+              {t('heroTitle1')}
             </span>
             <br />
             <span className="bg-gradient-to-r from-primary via-blue-500 to-purple-500 bg-clip-text text-transparent">
-              depuis une Seule Plateforme
+              {t('heroTitle2')}
             </span>
           </h1>
 
           {/* Description */}
           <p className="mt-6 max-w-2xl text-base sm:text-lg leading-relaxed text-muted-foreground animate-fade-in-up delay-200">
-            OmniCore intègre RH, Finance, Pharmacie, Éducation, Commerce et plus dans un cloud ERP 
-            sécurisé, conçu pour les organisations modernes africaines et internationales.
+            {t('heroDesc')}
           </p>
 
           {/* CTAs */}
           <div className="mt-10 flex flex-col sm:flex-row items-center gap-4 animate-fade-in-up delay-300">
             <Button size="xl" asChild className="gap-2 w-full sm:w-auto shadow-xl shadow-primary/30 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary transition-all duration-300">
               <a href={localePath("/signup")}>
-                Commencer gratuitement
+                {t('heroStartFree')}
                 <ArrowRight className="h-5 w-5" />
               </a>
             </Button>
             <Button variant="outline" size="xl" asChild className="w-full sm:w-auto">
-              <a href={localePath("/contact")}>Demander une démo</a>
+              <a href={localePath("/contact")}>{t('heroRequestDemo')}</a>
             </Button>
             <Button variant="ghost" size="xl" asChild className="w-full sm:w-auto">
-              <a href={localePath("/login")}>Se connecter</a>
+              <a href={localePath("/login")}>{t('signIn')}</a>
             </Button>
           </div>
 
@@ -310,10 +312,10 @@ function HeroSection() {
           <div className="mt-16 w-full max-w-4xl animate-fade-in-up delay-400">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 border-y border-border/40 py-8">
               {[
-                { icon: Shield, label: "Sécurité Maximale", desc: "Chiffrement AES-256" },
-                { icon: Cloud, label: "100% Cloud", desc: "Accessible partout" },
-                { icon: Zap, label: "Performance", desc: "Temps réel" },
-                { icon: Globe, label: "Multi-langue", desc: "FR, EN, SW" },
+                { icon: Shield, label: t('heroMaxSecurity'), desc: t('heroMaxSecurityDesc') },
+                { icon: Cloud, label: t('heroCloud'), desc: t('heroCloudDesc') },
+                { icon: Zap, label: t('heroPerformance'), desc: t('heroPerformanceDesc') },
+                { icon: Globe, label: t('heroMultilang'), desc: t('heroMultilangDesc') },
               ].map((item) => (
                 <div key={item.label} className="flex flex-col items-center gap-2 group">
                   <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-gradient-to-br from-primary/10 to-purple-500/10 text-primary group-hover:scale-110 group-hover:shadow-lg transition-all duration-300">
@@ -332,75 +334,93 @@ function HeroSection() {
 }
 
 /* ───── ERP Module Cards ───── */
-const ERP_MODULES = [
-  {
-    id: "hr",
-    name: "Ressources Humaines",
-    short: "RH",
-    desc: "Gestion complète des employés, paie, congés, présences et évaluations de performance.",
-    benefits: ["Paie automatisée", "Suivi des présences", "Portail employé"],
-    icon: Users,
-    gradient: "from-blue-500 to-blue-600",
-    lightGradient: "from-blue-500/10 to-blue-600/5",
-    textColor: "text-blue-500",
-    borderColor: "border-blue-500/20",
-    href: "/signup?workspace=hr",
-  },
-  {
-    id: "finance",
-    name: "Finance & Comptabilité",
-    short: "Finance",
-    desc: "Comptabilité, budgets, facturation, suivi des dépenses et reporting financier en temps réel.",
-    benefits: ["Comptabilité intégrée", "Budgets & prévisions", "Reporting automatique"],
-    icon: DollarSign,
-    gradient: "from-emerald-500 to-emerald-600",
-    lightGradient: "from-emerald-500/10 to-emerald-600/5",
-    textColor: "text-emerald-500",
-    borderColor: "border-emerald-500/20",
-    href: "/signup?workspace=finance",
-  },
-  {
-    id: "healthcare",
-    name: "Santé & Pharmacie",
-    short: "Santé",
-    desc: "Gestion des patients, rendez-vous, médicaments, stocks pharmaceutiques et personnel médical.",
-    benefits: ["Dossier patient", "Gestion des stocks", "Alertes péremption"],
-    icon: Heart,
-    gradient: "from-rose-500 to-rose-600",
-    lightGradient: "from-rose-500/10 to-rose-600/5",
-    textColor: "text-rose-500",
-    borderColor: "border-rose-500/20",
-    href: "/signup?workspace=healthcare",
-  },
-  {
-    id: "education",
-    name: "Éducation",
-    short: "Éducation",
-    desc: "Gestion scolaire complète : étudiants, enseignants, classes, notes et emplois du temps.",
-    benefits: ["Notes & bulletins", "Emplois du temps", "Communication parents"],
-    icon: GraduationCap,
-    gradient: "from-purple-500 to-purple-600",
-    lightGradient: "from-purple-500/10 to-purple-600/5",
-    textColor: "text-purple-500",
-    borderColor: "border-purple-500/20",
-    href: "/signup?workspace=education",
-  },
-  {
-    id: "commerce",
-    name: "Commerce & Inventaire",
-    short: "Commerce",
-    desc: "Ventes, achats, gestion des stocks, entrepôts, commandes fournisseurs et catalogue produits.",
-    benefits: ["Point de vente", "Stock temps réel", "Multi-entrepôts"],
-    icon: ShoppingCart,
-    gradient: "from-amber-500 to-amber-600",
-    lightGradient: "from-amber-500/10 to-amber-600/5",
-    textColor: "text-amber-500",
-    borderColor: "border-amber-500/20",
-    href: "/signup?workspace=commerce",
-  },
-];
+interface ModuleDef {
+  id: string;
+  nameKey: string;
+  shortKey: string;
+  descKey: string;
+  benefitsKey: string[];
+  icon: any;
+  gradient: string;
+  lightGradient: string;
+  textColor: string;
+  borderColor: string;
+  href: string;
+}
 
-function ModuleCard({ mod, index }: { mod: typeof ERP_MODULES[0]; index: number }) {
+function useModuleDefs(): ModuleDef[] {
+  const t = useTranslations("landing");
+  return [
+    {
+      id: "hr",
+      nameKey: t("modulesHR"),
+      shortKey: t("modulesHRShort"),
+      descKey: t("modulesHRDesc"),
+      benefitsKey: [t("modulesHRBenefit1"), t("modulesHRBenefit2"), t("modulesHRBenefit3")],
+      icon: Users,
+      gradient: "from-blue-500 to-blue-600",
+      lightGradient: "from-blue-500/10 to-blue-600/5",
+      textColor: "text-blue-500",
+      borderColor: "border-blue-500/20",
+      href: "/signup?workspace=hr",
+    },
+    {
+      id: "finance",
+      nameKey: t("modulesFinance"),
+      shortKey: t("modulesFinanceShort"),
+      descKey: t("modulesFinanceDesc"),
+      benefitsKey: [t("modulesFinanceBenefit1"), t("modulesFinanceBenefit2"), t("modulesFinanceBenefit3")],
+      icon: DollarSign,
+      gradient: "from-emerald-500 to-emerald-600",
+      lightGradient: "from-emerald-500/10 to-emerald-600/5",
+      textColor: "text-emerald-500",
+      borderColor: "border-emerald-500/20",
+      href: "/signup?workspace=finance",
+    },
+    {
+      id: "healthcare",
+      nameKey: t("modulesHealth"),
+      shortKey: t("modulesHealthShort"),
+      descKey: t("modulesHealthDesc"),
+      benefitsKey: [t("modulesHealthBenefit1"), t("modulesHealthBenefit2"), t("modulesHealthBenefit3")],
+      icon: Heart,
+      gradient: "from-rose-500 to-rose-600",
+      lightGradient: "from-rose-500/10 to-rose-600/5",
+      textColor: "text-rose-500",
+      borderColor: "border-rose-500/20",
+      href: "/signup?workspace=healthcare",
+    },
+    {
+      id: "education",
+      nameKey: t("modulesEducation"),
+      shortKey: t("modulesEducationShort"),
+      descKey: t("modulesEducationDesc"),
+      benefitsKey: [t("modulesEducationBenefit1"), t("modulesEducationBenefit2"), t("modulesEducationBenefit3")],
+      icon: GraduationCap,
+      gradient: "from-purple-500 to-purple-600",
+      lightGradient: "from-purple-500/10 to-purple-600/5",
+      textColor: "text-purple-500",
+      borderColor: "border-purple-500/20",
+      href: "/signup?workspace=education",
+    },
+    {
+      id: "commerce",
+      nameKey: t("modulesCommerce"),
+      shortKey: t("modulesCommerceShort"),
+      descKey: t("modulesCommerceDesc"),
+      benefitsKey: [t("modulesCommerceBenefit1"), t("modulesCommerceBenefit2"), t("modulesCommerceBenefit3")],
+      icon: ShoppingCart,
+      gradient: "from-amber-500 to-amber-600",
+      lightGradient: "from-amber-500/10 to-amber-600/5",
+      textColor: "text-amber-500",
+      borderColor: "border-amber-500/20",
+      href: "/signup?workspace=commerce",
+    },
+  ];
+}
+
+function ModuleCard({ mod, index }: { mod: ModuleDef; index: number }) {
+  const t = useTranslations("landing");
   return (
     <ScrollReveal delay={index * 100}>
       <div
@@ -428,13 +448,11 @@ function ModuleCard({ mod, index }: { mod: typeof ERP_MODULES[0]; index: number 
 
         {/* Content */}
         <div className="relative">
-          <h3 className="text-xl font-bold mb-2">{mod.name}</h3>
-          <p className="text-sm text-muted-foreground leading-relaxed mb-4">{mod.desc}</p>
-
-          {/* Benefits */}
+          <h3 className="text-xl font-bold mb-2">{mod.nameKey}</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-4">{mod.descKey}</p>          {/* Benefits */}
           <ul className="space-y-2 mb-6">
-            {mod.benefits.map((benefit) => (
-              <li key={benefit} className="flex items-center gap-2 text-sm">
+            {mod.benefitsKey.map((benefit, i) => (
+              <li key={i} className="flex items-center gap-2 text-sm">
                 <CheckCircle className={cn("h-4 w-4 shrink-0", mod.textColor)} />
                 <span className="text-muted-foreground">{benefit}</span>
               </li>
@@ -447,7 +465,7 @@ function ModuleCard({ mod, index }: { mod: typeof ERP_MODULES[0]; index: number 
             "shadow-lg hover:shadow-xl",
           )}>
             <a href={localePath(mod.href)}>
-              Créer un espace {mod.short}
+              {t('createWorkspace')} {mod.shortKey}
               <ArrowRight className="h-4 w-4 shrink-0" />
             </a>
           </Button>
@@ -458,6 +476,8 @@ function ModuleCard({ mod, index }: { mod: typeof ERP_MODULES[0]; index: number 
 }
 
 function ModulesSection() {
+  const t = useTranslations("landing");
+  const modules = useModuleDefs();
   return (
     <section id="modules" className="relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden bg-muted/30">
       <div className="absolute inset-0 -z-10">
@@ -468,19 +488,19 @@ function ModulesSection() {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
               <Layers className="h-4 w-4" />
-              <span>Modules ERP</span>
+              <span>{t('modulesBadge')}</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              La Suite Complète pour Votre Organisation
+              {t('modulesTitle')}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Créez votre espace de travail et commencez à gérer vos opérations en quelques clics.
+              {t('modulesDesc')}
             </p>
           </div>
         </ScrollReveal>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-          {ERP_MODULES.map((mod, index) => (
+          {modules.map((mod, index) => (
             <ModuleCard key={mod.id} mod={mod} index={index} />
           ))}
         </div>
@@ -491,13 +511,14 @@ function ModulesSection() {
 
 /* ───── Why OmniCore ───── */
 function WhyOmniCoreSection() {
+  const t = useTranslations("landing");
   const benefits = [
-    { icon: Cloud, title: "Cloud Natif", desc: "Infrastructure scalable, accessible 24/7 depuis n'importe où." },
-    { icon: Shield, title: "Sécurité Enterprise", desc: "Chiffrement AES-256, RBAC, audit trail et conformité RGPD." },
-    { icon: Bot, title: "Assistant IA", desc: "Intelligence artificielle intégrée pour automatiser vos tâches." },
-    { icon: Globe, title: "Multi-langue", desc: "Interface complète en français, anglais et swahili." },
-    { icon: TrendingUp, title: "Évolutif", desc: "De la PME à la multinationale, OmniCore grandit avec vous." },
-    { icon: HeadphonesIcon, title: "Support Dédié", desc: "Équipe locale disponible pour vous accompagner." },
+    { icon: Cloud, title: t("whyCloudNative"), desc: t("whyCloudNativeDesc") },
+    { icon: Shield, title: t("whySecurity"), desc: t("whySecurityDesc") },
+    { icon: Bot, title: t("whyAI"), desc: t("whyAIDesc") },
+    { icon: Globe, title: t("whyMultilang"), desc: t("whyMultilangDesc") },
+    { icon: TrendingUp, title: t("whyScalable"), desc: t("whyScalableDesc") },
+    { icon: HeadphonesIcon, title: t("whySupport"), desc: t("whySupportDesc") },
   ];
 
   return (
@@ -507,13 +528,13 @@ function WhyOmniCoreSection() {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
               <Star className="h-4 w-4" />
-              <span>Pourquoi OmniCore</span>
+              <span>{t('whyBadge')}</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Conçu pour l&apos;Excellence Opérationnelle
+              {t('whyTitle')}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Une plateforme robuste qui combine technologie de pointe et simplicité d&apos;utilisation.
+              {t('whyDesc')}
             </p>
           </div>
         </ScrollReveal>
@@ -540,11 +561,12 @@ function WhyOmniCoreSection() {
 
 /* ───── Trust & Enterprise Section ───── */
 function TrustSection() {
+  const t = useTranslations("landing");
   const stats = [
-    { value: "99.9%", label: "Disponibilité", icon: Server },
-    { value: "256-bit", label: "Chiffrement", icon: Lock },
-    { value: "24/7", label: "Support", icon: HeadphonesIcon },
-    { value: "ISO", label: "Conformité", icon: Award },
+    { value: "99.9%", label: t("infraUptime"), icon: Server },
+    { value: "256-bit", label: t("infraEncryption"), icon: Lock },
+    { value: "24/7", label: t("infraSupport"), icon: HeadphonesIcon },
+    { value: "ISO", label: t("infraCompliance"), icon: Award },
   ];
 
   return (
@@ -554,13 +576,13 @@ function TrustSection() {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
               <Shield className="h-4 w-4" />
-              <span>Infrastructure Enterprise</span>
+              <span>{t('infraBadge')}</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Une Infrastructure de Classe Mondiale
+              {t('infraTitle')}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Déployé sur une infrastructure cloud sécurisée avec les plus hauts standards de l&apos;industrie.
+              {t('infraDesc')}
             </p>
           </div>
         </ScrollReveal>
@@ -585,6 +607,7 @@ function TrustSection() {
 
 /* ───── Final CTA ───── */
 function CTASection() {
+  const t = useTranslations("landing");
   return (
     <section className="relative py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -594,33 +617,32 @@ function CTASection() {
         <ScrollReveal>
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
             <Sparkles className="h-4 w-4" />
-            <span>Prêt à Démarrer ?</span>
+            <span>{t('ctaBadge')}</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-6">
-            Créez Votre Espace de Travail
+            {t('ctaTitle1')}
             <br />
-            <span className="text-primary">Gratuitement</span>
+            <span className="text-primary">{t('ctaTitle2')}</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10">
-            Rejoignez les organisations qui modernisent leur gestion avec OmniCore.
-            Commencez gratuitement, aucun engagement.
+            {t('ctaDesc')}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button size="xl" asChild className="gap-2 w-full sm:w-auto shadow-xl shadow-primary/30 bg-gradient-to-r from-primary to-primary/90">
               <a href={localePath("/signup")}>
-                Créer mon espace
+                {t('ctaButton')}
                 <ArrowRight className="h-5 w-5" />
               </a>
             </Button>
             <Button variant="outline" size="xl" asChild className="w-full sm:w-auto">
-              <a href={localePath("/contact")}>Contacter les ventes</a>
+              <a href={localePath("/contact")}>{t('ctaSales')}</a>
             </Button>
           </div>
 
           <p className="mt-6 text-sm text-muted-foreground">
             <CheckCircle className="inline h-4 w-4 mr-1 text-emerald-500" />
-            Essai gratuit de 14 jours · Sans carte bancaire · Sans engagement
+            {t('ctaFree')}
           </p>
         </ScrollReveal>
       </div>
@@ -630,33 +652,34 @@ function CTASection() {
 
 /* ───── Footer ───── */
 function Footer() {
+  const t = useTranslations("landing");
   const currentYear = new Date().getFullYear();
 
   const quickLinks = [
-    { label: "Fonctionnalités", href: localePath("/features") },
-    { label: "Modules", href: "#modules" },
-    { label: "Tarifs", href: localePath("/pricing") },
-    { label: "Documentation", href: "#" },
+    { label: t("navFeatures"), href: localePath("/features") },
+    { label: t("navModules"), href: "#modules" },
+    { label: t("footerPricing"), href: localePath("/pricing") },
+    { label: t("footerDoc"), href: "#" },
   ];
 
   const companyLinks = [
-    { label: "À propos", href: localePath("/about") },
-    { label: "Contact", href: localePath("/contact") },
-    { label: "Tarifs", href: localePath("/pricing") },
+    { label: t("footerAbout"), href: localePath("/about") },
+    { label: t("footerContact"), href: localePath("/contact") },
+    { label: t("footerPricing"), href: localePath("/pricing") },
   ];
 
   const legalLinks = [
-    { label: "Confidentialité", href: localePath("/privacy") },
-    { label: "Conditions", href: localePath("/terms") },
-    { label: "Cookies", href: localePath("/cookies") },
+    { label: t("footerPrivacy"), href: localePath("/privacy") },
+    { label: t("footerTerms"), href: localePath("/terms") },
+    { label: t("footerCookies"), href: localePath("/cookies") },
   ];
 
   const moduleLinks = [
-    { label: "Ressources Humaines", href: localePath("/signup?workspace=hr") },
-    { label: "Finance", href: localePath("/signup?workspace=finance") },
-    { label: "Santé & Pharmacie", href: localePath("/signup?workspace=healthcare") },
-    { label: "Éducation", href: localePath("/signup?workspace=education") },
-    { label: "Commerce", href: localePath("/signup?workspace=commerce") },
+    { label: t("footerModulesHR"), href: localePath("/signup?workspace=hr") },
+    { label: t("footerModulesFinance"), href: localePath("/signup?workspace=finance") },
+    { label: t("footerModulesHealth"), href: localePath("/signup?workspace=healthcare") },
+    { label: t("modulesEducationShort"), href: localePath("/signup?workspace=education") },
+    { label: t("modulesCommerceShort"), href: localePath("/signup?workspace=commerce") },
   ];
 
   return (
@@ -677,8 +700,7 @@ function Footer() {
               <span className="text-lg font-bold">OmniCore</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-sm mb-6">
-              Plateforme ERP cloud moderne. Solutions de gestion intégrées 
-              pour les organisations de toutes tailles.
+              {t('footerDesc')}
             </p>
             <div className="flex gap-3">
               {[
@@ -700,7 +722,7 @@ function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold text-sm mb-4">Liens</h4>
+            <h4 className="font-semibold text-sm mb-4">{t('footerLinks')}</h4>
             <ul className="space-y-2.5">
               {quickLinks.map((link) => (
                 <li key={link.label}>
@@ -714,7 +736,7 @@ function Footer() {
 
           {/* Company */}
           <div>
-            <h4 className="font-semibold text-sm mb-4">Entreprise</h4>
+            <h4 className="font-semibold text-sm mb-4">{t('footerCompany')}</h4>
             <ul className="space-y-2.5">
               {companyLinks.map((link) => (
                 <li key={link.label}>
@@ -728,7 +750,7 @@ function Footer() {
 
           {/* Legal + Contact */}
           <div>
-            <h4 className="font-semibold text-sm mb-4">Informations</h4>
+            <h4 className="font-semibold text-sm mb-4">{t('footerInfo')}</h4>
             <ul className="space-y-2.5">
               {legalLinks.map((link) => (
                 <li key={link.label}>
@@ -756,7 +778,7 @@ function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground">
-            &copy; {currentYear} OmniCore. Développé par John Mocket. Tous droits réservés.
+            &copy; {currentYear} OmniCore. {t('footerDevelopedBy')}. {t('footerAllRights')}
           </p>
           <div className="flex flex-wrap gap-4">
             {moduleLinks.slice(0, 3).map((link) => (

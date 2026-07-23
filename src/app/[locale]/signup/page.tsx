@@ -48,7 +48,7 @@ export default function SignUpPage() {
       const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value || '';
 
       if (password !== confirmPassword) {
-        setError('Les mots de passe ne correspondent pas.');
+        setError(t('passwordMismatch'));
         setIsLoading(false);
         return;
       }
@@ -62,15 +62,15 @@ export default function SignUpPage() {
 
       if (authError) {
         if (authError.message.includes('already')) {
-          setError('Un compte avec cet email existe déjà.');
+          setError(t('accountExists'));
         } else {
-          setError(authError.message || 'Erreur lors de la création du compte.');
+          setError(authError.message || t('serverError'));
         }
         return;
       }
 
       if (!authData.user) {
-        setError('Erreur lors de la création du compte.');
+        setError(t('serverError'));
         return;
       }
 
@@ -94,11 +94,18 @@ export default function SignUpPage() {
         // Profile creation failed but auth user exists — still redirect to login
       }
 
-      // Redirect to workspaces (user is already signed in from signUp)
+      // Check if user is already signed in (auto-confirm enabled) or needs verification
       const locale = window.location.pathname.split('/')[1] || 'fr';
-      window.location.href = `/${locale}/workspaces`;
+      
+      if (authData.session) {
+        // Auto-confirmed: redirect to workspaces
+        window.location.href = `/${locale}/workspaces`;
+      } else {
+        // Email confirmation required: redirect to login with success message
+        window.location.href = `/${locale}/login?message=account_created`;
+      }
     } catch {
-      setError('Erreur de connexion au serveur');
+      setError(t('serverError'));
     } finally {
       setIsLoading(false);
     }
@@ -236,7 +243,7 @@ export default function SignUpPage() {
                   </div>
 
                   <Button type="submit" className="w-full h-11">
-                    Continuer
+                    {t("continue")}
                   </Button>
                 </>
               ) : (
@@ -295,14 +302,14 @@ export default function SignUpPage() {
                       required
                     />
                     <label htmlFor="terms" className="text-xs text-muted-foreground">
-                      J&apos;accepte les{" "}
-                      <a href="#" className="text-primary hover:underline">
-                        conditions d&apos;utilisation
-                      </a>{" "}
-                      et la{" "}
-                      <a href="#" className="text-primary hover:underline">
-                        politique de confidentialité
-                      </a>
+                      {t("acceptTerms")}{" "}
+                      <Link href="/terms" className="text-primary hover:underline">
+                        {t("termsOfService")}
+                      </Link>{" "}
+                      {t("and")}{" "}
+                      <Link href="/privacy" className="text-primary hover:underline">
+                        {t("privacyPolicy")}
+                      </Link>
                     </label>
                   </div>
 
@@ -319,7 +326,7 @@ export default function SignUpPage() {
                     onClick={() => setStep(1)}
                     className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    Retour
+                    {t("back")}
                   </button>
                 </>
               )}
