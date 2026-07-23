@@ -32,6 +32,9 @@ import {
   Award,
   HeadphonesIcon,
 } from "lucide-react";
+import { AIChat } from "@/components/ai-chat";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 
 /* ───── SVG Icons ───── */
 function SocialGithub({ className }: { className?: string }) {
@@ -170,7 +173,10 @@ function LandingNav() {
           </div>
 
           {/* Desktop CTAs */}
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-1">
+            <LocaleSwitcher />
+            <ThemeToggle />
+            <div className="w-px h-6 bg-border/50 mx-1" />
             <Button variant="ghost" size="sm" asChild>
               <a href={localePath("/login")}>{t("signIn")}</a>
             </Button>
@@ -210,7 +216,11 @@ function LandingNav() {
               {link.label}
             </a>
           ))}
-          <div className="pt-3 flex flex-col gap-2">
+          <div className="flex items-center gap-2 px-4 py-2">
+            <LocaleSwitcher />
+            <ThemeToggle />
+          </div>
+          <div className="pt-1 flex flex-col gap-2">
             <Button variant="outline" size="sm" asChild className="w-full justify-center">
               <a href={localePath("/login")}>{t("signIn")}</a>
             </Button>
@@ -797,6 +807,7 @@ function Footer() {
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
+      <AIChat />
       <LandingNav />
 
       <HeroSection />
