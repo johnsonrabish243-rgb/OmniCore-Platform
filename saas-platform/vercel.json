@@ -1,7 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "cd .. && npm install && npm run build",
-  "outputDirectory": "../.next",
+  "rootDirectory": ".",
   "headers": [
     {
       "source": "/(.*)",
