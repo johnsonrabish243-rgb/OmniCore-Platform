@@ -41,55 +41,22 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Use the server-side API route for login (handles session, cookies, workspace)
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
+      const data = await res.json();
 
-      if (signInError) {
-        setError("Email ou mot de passe incorrect.");
+      if (!res.ok) {
+        setError(data.error || 'Email ou mot de passe incorrect.');
         return;
       }
 
-      // After successful login, handle workspace redirect
-      // Fetch session to determine workspaces/orgs
-      const sessRes = await fetch('/api/auth/session');
-      if (sessRes.ok) {
-        const sess = await sessRes.json();
-        const userOrgs = sess.user?.organizations || [];
-
-        // Fetch workspaces for user orgs
-        const workspacesRes = await fetch('/api/admin/workspaces');
-        if (workspacesRes.ok) {
-          const list = await workspacesRes.json();
-          const workspaces = list.workspaces || [];
-
-          if (workspaces.length === 1) {
-            // Automatically select the single workspace
-            const pick = workspaces[0];
-            await fetch('/api/user/update', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ activeWorkspaceId: pick.id }),
-            });
-            // Redirect to dashboard
-            window.location.href = `/${window.location.pathname.split('/')[1] || 'fr'}/dashboard`;
-            return;
-          }
-
-          if (workspaces.length > 1) {
-            window.location.href = `/${window.location.pathname.split('/')[1] || 'fr'}/workspaces`;
-            return;
-          }
-
-          // No workspaces available - send to the dedicated workspace page for onboarding.
-          window.location.href = `/${window.location.pathname.split('/')[1] || 'fr'}/workspaces`;
-          return;
-        }
-      }
-
-      // Fallback: go to dashboard
-      window.location.href = `/${window.location.pathname.split('/')[1] || 'fr'}/dashboard`;
+      // Redirect to workspaces page (handles workspace selection/onboarding)
+      const locale = window.location.pathname.split('/')[1] || 'fr';
+      window.location.href = `/${locale}/workspaces`;
     } catch (err) {
       console.error('Login error:', err);
       setError('Erreur de connexion au serveur');

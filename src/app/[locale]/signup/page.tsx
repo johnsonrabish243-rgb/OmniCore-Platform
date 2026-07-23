@@ -60,20 +60,9 @@ export default function SignUpPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        // After account creation, sign in to establish a browser session
-        const supabase = createClient();
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) {
-          // Account created but sign-in failed (e.g. email confirmation required)
-          // Redirect to login page with a message
-          window.location.href = `/${window.location.pathname.split('/')[1] || 'fr'}/login?message=account_created`;
-          return;
-        }
-        // Redirect to workspaces page for workspace selection/onboarding
-        window.location.href = `/${window.location.pathname.split('/')[1] || 'fr'}/workspaces`;
+        // Redirect to login with success message
+        const locale = window.location.pathname.split('/')[1] || 'fr';
+        window.location.href = `/${locale}/login?message=account_created`;
       } else {
         setError(data.error || 'Erreur lors de l\'inscription');
       }
