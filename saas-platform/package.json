@@ -1,0 +1,8 @@
+{
+  "name": "omnicore-wrapper",
+  "private": true,
+  "scripts": {
+    "build": "cd .. && npm run build",
+    "install": "cd .. && npm install"
+  }
+}
