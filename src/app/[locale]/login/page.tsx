@@ -41,16 +41,15 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
     try {
-      // Use the server-side API route for login (handles session, cookies, workspace)
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      // Use the browser client directly — InsForge SDK handles cookies automatically
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      const data = await res.json();
 
-      if (!res.ok) {
-        setError(data.error || 'Email ou mot de passe incorrect.');
+      if (signInError) {
+        console.error('Login error:', signInError.message);
+        setError('Email ou mot de passe incorrect.');
         return;
       }
 

@@ -53,19 +53,50 @@ export default function SignUpPage() {
         return;
       }
 
+      // Step 1: Create auth user with browser client (sets cookies automatically)
+      const supabase = createClient();
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (authError) {
+        if (authError.message.includes('already')) {
+          setError('Un compte avec cet email existe déjà.');
+        } else {
+          setError(authError.message || 'Erreur lors de la création du compte.');
+        }
+        return;
+      }
+
+      if (!authData.user) {
+        setError('Erreur lors de la création du compte.');
+        return;
+      }
+
+      // Step 2: Create user profile + organization via server API
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, firstName, lastName, companyName: company, workspace: selectedWorkspace }),
+        body: JSON.stringify({
+          userId: authData.user.id,
+          email,
+          firstName,
+          lastName,
+          companyName: company,
+          workspace: selectedWorkspace,
+        }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        // Redirect to login with success message
-        const locale = window.location.pathname.split('/')[1] || 'fr';
-        window.location.href = `/${locale}/login?message=account_created`;
-      } else {
-        setError(data.error || 'Erreur lors de l\'inscription');
+
+      if (!res.ok) {
+        const data = await res.json();
+        console.error('Profile creation error:', data.error);
+        // Profile creation failed but auth user exists — still redirect to login
       }
+
+      // Redirect to workspaces (user is already signed in from signUp)
+      const locale = window.location.pathname.split('/')[1] || 'fr';
+      window.location.href = `/${locale}/workspaces`;
     } catch {
       setError('Erreur de connexion au serveur');
     } finally {
