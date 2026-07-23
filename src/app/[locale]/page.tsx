@@ -405,7 +405,7 @@ function ModuleCard({ mod, index }: { mod: typeof ERP_MODULES[0]; index: number 
     <ScrollReveal delay={index * 100}>
       <div
         className={cn(
-          "group relative overflow-hidden rounded-[20px] border p-6 sm:p-8",
+          "group relative overflow-hidden rounded-[20px] border p-6 sm:p-8 flex flex-col",
           "bg-gradient-to-br from-card to-card/80 hover:shadow-2xl hover:-translate-y-2",
           "transition-all duration-500",
           mod.borderColor
@@ -443,12 +443,12 @@ function ModuleCard({ mod, index }: { mod: typeof ERP_MODULES[0]; index: number 
 
           {/* CTA */}
           <Button asChild className={cn(
-            "w-full gap-2 transition-all duration-300",
+            "w-full gap-2 transition-all duration-300 mt-auto",
             "shadow-lg hover:shadow-xl",
           )}>
             <a href={localePath(mod.href)}>
               Créer un espace {mod.short}
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4 shrink-0" />
             </a>
           </Button>
         </div>
@@ -479,7 +479,7 @@ function ModulesSection() {
           </div>
         </ScrollReveal>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
           {ERP_MODULES.map((mod, index) => (
             <ModuleCard key={mod.id} mod={mod} index={index} />
           ))}

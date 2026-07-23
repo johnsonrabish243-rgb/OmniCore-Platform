@@ -45,6 +45,13 @@ export default function SignUpPage() {
       const company = (document.getElementById('company') as HTMLInputElement)?.value || '';
       const email = (document.getElementById('email') as HTMLInputElement)?.value || '';
       const password = (document.getElementById('password') as HTMLInputElement)?.value || '';
+      const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value || '';
+
+      if (password !== confirmPassword) {
+        setError('Les mots de passe ne correspondent pas.');
+        setIsLoading(false);
+        return;
+      }
 
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -53,7 +60,20 @@ export default function SignUpPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        window.location.href = `/${window.location.pathname.split('/')[1] || 'fr'}/dashboard`;
+        // After account creation, sign in to establish a browser session
+        const supabase = createClient();
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) {
+          // Account created but sign-in failed (e.g. email confirmation required)
+          // Redirect to login page with a message
+          window.location.href = `/${window.location.pathname.split('/')[1] || 'fr'}/login?message=account_created`;
+          return;
+        }
+        // Redirect to workspaces page for workspace selection/onboarding
+        window.location.href = `/${window.location.pathname.split('/')[1] || 'fr'}/workspaces`;
       } else {
         setError(data.error || 'Erreur lors de l\'inscription');
       }
