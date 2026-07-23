@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const organizationId = url.searchParams.get("organizationId");
 
   const { createClient } = await import("@/lib/create-insforge-client");
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: memberships } = await supabase
     .from("organization_members")
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
   const { createClient } = await import("@/lib/create-insforge-client");
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const body = await request.json();
   const { organizationId, name, sku, description, category, price, stock } = body;
@@ -66,7 +66,7 @@ export async function PATCH(request: Request) {
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
   const { createClient } = await import("@/lib/create-insforge-client");
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const body = await request.json();
   const { id, ...data } = body;
@@ -96,7 +96,7 @@ export async function DELETE(request: Request) {
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
   const { createClient } = await import("@/lib/create-insforge-client");
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const body = await request.json();
   const { id } = body;

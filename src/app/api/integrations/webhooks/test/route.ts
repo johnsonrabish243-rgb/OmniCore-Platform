@@ -6,7 +6,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
     const { createClient } = await import("@/lib/create-insforge-client");
-    const supabase = createClient();
+    const supabase = await createClient();
 
   const body = await request.json();
   const { webhookId } = body;

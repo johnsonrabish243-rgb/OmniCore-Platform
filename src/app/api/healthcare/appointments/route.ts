@@ -6,7 +6,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
     const { createClient } = await import("@/lib/create-insforge-client");
-    const supabase = createClient();
+    const supabase = await createClient();
 
   const { data: memberships } = await supabase.from("organization_members").select("organization_id").eq("user_id", user.id);
   const orgIds = memberships?.map((m) => m.organization_id) || [];
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
     const { createClient } = await import("@/lib/create-insforge-client");
-    const supabase = createClient();
+    const supabase = await createClient();
 
   const body = await request.json();
   const { data: appointment } = await supabase.from("appointments").insert({ ...body }).select().single();

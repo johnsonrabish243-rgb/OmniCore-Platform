@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     }
 
     const { createClient } = await import("@/lib/create-insforge-client");
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const body = await request.json();
     const {

@@ -6,7 +6,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
     const { createClient } = await import("@/lib/create-insforge-client");
-    const supabase = createClient();
+    const supabase = await createClient();
 
   const { data: memberships } = await supabase
     .from("organization_members")
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
     const { createClient } = await import("@/lib/create-insforge-client");
-    const supabase = createClient();
+    const supabase = await createClient();
 
   const body = await request.json();
   const { organizationId, title, value, currency, contactId, probability, expectedCloseDate, notes, source } = body;
@@ -79,7 +79,7 @@ export async function PATCH(request: Request) {
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
     const { createClient } = await import("@/lib/create-insforge-client");
-    const supabase = createClient();
+    const supabase = await createClient();
 
   const body = await request.json();
   const { id, stage, value, probability, contactId, expectedCloseDate, notes, title } = body;
@@ -109,7 +109,7 @@ export async function DELETE(request: Request) {
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
     const { createClient } = await import("@/lib/create-insforge-client");
-    const supabase = createClient();
+    const supabase = await createClient();
 
   const body = await request.json();
   const { id } = body;
