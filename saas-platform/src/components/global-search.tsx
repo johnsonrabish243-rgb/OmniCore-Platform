@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "@/i18n/routing";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   Search,
@@ -56,6 +57,8 @@ const ALL_ROUTES: SearchResult[] = [
 
 export function GlobalSearch() {
   const router = useRouter();
+  const t = useTranslations("globalSearch");
+  const ts = useTranslations("nav");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -153,12 +156,11 @@ export function GlobalSearch() {
         )}
       >
         {/* Search Input */}
-        <div className="flex items-center gap-3 border-b border-border/40 px-4 py-3">
-          <Search className="h-5 w-5 text-muted-foreground shrink-0" />
+        <div className="flex items-center gap-3 border-b border-border/40 px-4 py-3">              <Search className="h-5 w-5 text-muted-foreground shrink-0" />
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search pages, modules, settings..."
+            placeholder={t('placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handlePaletteKeyDown}
@@ -174,8 +176,8 @@ export function GlobalSearch() {
           {results.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Search className="h-8 w-8 text-muted-foreground/30 mb-2" />
-              <p className="text-sm text-muted-foreground">No results found</p>
-              <p className="text-xs text-muted-foreground/50">Try a different search term</p>
+              <p className="text-sm text-muted-foreground">{t('noResults')}</p>
+              <p className="text-xs text-muted-foreground/50">{t('noResultsDesc')}</p>
             </div>
           ) : (
             <div className="space-y-1">

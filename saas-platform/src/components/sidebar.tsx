@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { usePathname } from "@/i18n/routing";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -55,36 +56,7 @@ interface WorkspaceData {
   type?: string | null;
 }
 
-const mainNavItems: NavItem[] = [
-  { label: "Tableau de Bord", icon: <LayoutDashboard size={20} />, href: "/dashboard" },
-  { label: "Analytique", icon: <BarChart3 size={20} />, href: "/analytics" },
-];
-
-const adminNavItems: NavItem[] = [
-  { label: "Administration", icon: <Shield size={20} />, href: "/admin" },
-];
-
-const moduleNavItems: NavItem[] = [
-  { label: "Ressources Humaines", icon: <Users size={20} />, href: "/hr", moduleId: "hr" },
-  { label: "Finance", icon: <DollarSign size={20} />, href: "/finance", moduleId: "finance" },
-  { label: "CRM", icon: <Briefcase size={20} />, href: "/crm", moduleId: "crm" },
-  { label: "Commerce", icon: <ShoppingBag size={20} />, href: "/commerce", moduleId: "commerce" },
-  { label: "Ventes", icon: <ShoppingCart size={20} />, href: "/sales", moduleId: "sales" },
-  { label: "Inventaire", icon: <Package size={20} />, href: "/inventory", moduleId: "inventory" },
-  { label: "Pharmacie", icon: <Pill size={20} />, href: "/pharmacy", moduleId: "pharmacy" },
-  { label: "Éducation", icon: <GraduationCap size={20} />, href: "/education", moduleId: "education" },
-  { label: "Santé", icon: <Heart size={20} />, href: "/healthcare", moduleId: "healthcare" },
-  { label: "Projets", icon: <FolderKanban size={20} />, href: "/projects", moduleId: "projects" },
-  { label: "Tâches", icon: <CheckSquare size={20} />, href: "/tasks", moduleId: "tasks" },
-  { label: "Calendrier", icon: <Calendar size={20} />, href: "/calendar", moduleId: "calendar" },
-  { label: "Messages", icon: <MessageSquare size={20} />, href: "/messages", badge: 3, moduleId: "messages" },
-  { label: "Documents", icon: <FileText size={20} />, href: "/documents", moduleId: "documents" },
-];
-
-const bottomNavItems: NavItem[] = [
-  { label: "Paramètres", icon: <Settings size={20} />, href: "/settings" },
-  { label: "Aide", icon: <HelpCircle size={20} />, href: "/help" },
-];
+// These are static labels used in navigation; translation is done in the component
 
 const ADMIN_ROLES = ["SUPER_ADMIN", "ADMIN"];
 
@@ -288,7 +260,41 @@ function WorkspaceSwitcher({ collapsed, activeWorkspaceId }: { collapsed: boolea
 /* ───── Main Sidebar ───── */
 export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const t = useTranslations("nav");
+  const ts = useTranslations("sidebar");
   const [expandedModules, setExpandedModules] = useState(true);
+
+  const mainNavItems: NavItem[] = [
+    { label: t("dashboard"), icon: <LayoutDashboard size={20} />, href: "/dashboard" },
+    { label: t("analytics"), icon: <BarChart3 size={20} />, href: "/analytics" },
+  ];
+
+  const adminNavItems: NavItem[] = [
+    { label: t("admin"), icon: <Shield size={20} />, href: "/admin" },
+  ];
+
+  const moduleNavItems: NavItem[] = [
+    { label: t("hr"), icon: <Users size={20} />, href: "/hr", moduleId: "hr" },
+    { label: ts("finance"), icon: <DollarSign size={20} />, href: "/finance", moduleId: "finance" },
+    { label: t("crm"), icon: <Briefcase size={20} />, href: "/crm", moduleId: "crm" },
+    { label: t("commerce"), icon: <ShoppingBag size={20} />, href: "/commerce", moduleId: "commerce" },
+    { label: t("sales"), icon: <ShoppingCart size={20} />, href: "/sales", moduleId: "sales" },
+    { label: t("inventory"), icon: <Package size={20} />, href: "/inventory", moduleId: "inventory" },
+    { label: t("pharmacy"), icon: <Pill size={20} />, href: "/pharmacy", moduleId: "pharmacy" },
+    { label: t("education"), icon: <GraduationCap size={20} />, href: "/education", moduleId: "education" },
+    { label: t("healthcare"), icon: <Heart size={20} />, href: "/healthcare", moduleId: "healthcare" },
+    { label: t("projects"), icon: <FolderKanban size={20} />, href: "/projects", moduleId: "projects" },
+    { label: t("tasks"), icon: <CheckSquare size={20} />, href: "/tasks", moduleId: "tasks" },
+    { label: t("calendar"), icon: <Calendar size={20} />, href: "/calendar", moduleId: "calendar" },
+    { label: t("messages"), icon: <MessageSquare size={20} />, href: "/messages", badge: 3, moduleId: "messages" },
+    { label: ts("documents"), icon: <FileText size={20} />, href: "/documents", moduleId: "documents" },
+  ];
+
+  const bottomNavItems: NavItem[] = [
+    { label: t("settings"), icon: <Settings size={20} />, href: "/settings" },
+    { label: t("help"), icon: <HelpCircle size={20} />, href: "/help" },
+  ];
+
   const [session, setSession] = useState<{
     firstName: string | null;
     lastName: string | null;
@@ -402,7 +408,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           <div className={cn("space-y-1", collapsed && "flex flex-col items-center")}>
             {!collapsed && (
               <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                Général
+                {ts('general')}
               </p>
             )}
             {mainNavItems.map((item) => (
@@ -432,7 +438,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
               <div className={cn("space-y-1", collapsed && "flex flex-col items-center")}>
                 {!collapsed && (
                   <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                    Administration
+                    {t("admin")}
                   </p>
                 )}
                 {adminNavItems.map((item) => (
@@ -479,7 +485,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
                   <span className="shrink-0"><Building2 size={20} /></span>
                   {!collapsed && (
                     <>
-                      <span className="flex-1 text-left">Modules</span>
+                      <span className="flex-1 text-left">{ts('modules')}</span>
                       <ChevronDown
                         className={cn(
                           "h-4 w-4 text-muted-foreground transition-transform duration-200",

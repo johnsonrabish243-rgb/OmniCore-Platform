@@ -29,8 +29,20 @@
     "login": "Connexion",
     "signup": "Inscription",
     "integrations": "Intégrations",
+    "finance": "Finance",
+    "documents": "Documents",
     "workspace": "Espace de travail",
     "admin": "Administration"
+  },
+  "sidebar": {
+    "general": "Général",
+    "modules": "Modules",
+    "documents": "Documents",
+    "finance": "Finance",
+    "activeWorkspace": "Espace de travail actif",
+    "workspaces": "Espaces de travail",
+    "search": "Rechercher...",
+    "loading": "Chargement..."
   },
   "auth": {
     "welcome": "Bienvenue sur OmniCore",
@@ -74,6 +86,7 @@
     "passwordMismatch": "Les mots de passe ne correspondent pas.",
     "accountExists": "Un compte avec cet email existe déjà.",
     "serverError": "Erreur de connexion au serveur",
+    "captchaRequired": "Veuillez compléter la vérification de sécurité.",
     "invalidCredentials": "Email ou mot de passe incorrect.",
     "accountDisabled": "Ce compte a été désactivé.",
     "profileNotFound": "Profil utilisateur introuvable.",
@@ -892,5 +905,32 @@
     "darkMode": "Mode sombre",
     "lightMode": "Mode clair",
     "systemMode": "Mode système"
+  },
+  "routeGuard": {
+    "moduleNotAvailable": "Module non disponible",
+    "moduleNotAvailableDesc": "Ce module n'est pas activé pour votre espace de travail. Contactez votre administrateur pour plus d'informations.",
+    "backToDashboard": "Retour au tableau de bord"
+  },
+  "globalSearch": {
+    "placeholder": "Rechercher pages, modules, paramètres...",
+    "noResults": "Aucun résultat trouvé",
+    "noResultsDesc": "Essayez un terme de recherche différent",
+    "general": "Général",
+    "modules": "Modules",
+    "system": "Système",
+    "navigate": "Naviguer",
+    "open": "Ouvrir",
+    "close": "Fermer"
+  },
+  "omniCaptcha": {
+    "title": "Vérification de sécurité",
+    "answerPlaceholder": "Votre réponse",
+    "verify": "Vérifier",
+    "refresh": "Nouveau défi",
+    "verified": "✓ Vérifié",
+    "incorrect": "Réponse incorrecte. Réessayez.",
+    "loadError": "Impossible de charger le captcha",
+    "verifyError": "La vérification a échoué",
+    "footer": "Protégé par OmniCaptcha"
   }
 }

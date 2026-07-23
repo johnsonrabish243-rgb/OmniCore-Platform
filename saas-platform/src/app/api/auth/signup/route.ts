@@ -1,36 +1,83 @@
 import { NextResponse } from "next/server";
-import { createClient as createInsforgeClient, createAdminClient } from "@insforge/sdk";
+import { createAdminClient } from "@insforge/sdk";
+import { createClient } from "@/lib/supabase/server";
 
 const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL!;
-const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY!;
 const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY!;
 
 /**
- * Signup profile creation route.
- * Auth is already handled by the browser client (signUp sets cookies).
- * This route only creates the user profile + organization in the database
- * using the admin client (bypasses RLS).
+ * Signup route that:
+ * 1. Creates the auth user via SDK client (auto-confirm if platform allows)
+ * 2. Creates user profile in the users table
+ * 3. Creates organization + workspace if company name provided
+ * 4. Sets up workspace with default modules
  */
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, email, firstName, lastName, companyName, workspace } = body;
+    const { email, password, firstName, lastName, companyName, workspace } = body;
 
     // Validate input
-    if (!userId || !email || !firstName || !lastName) {
+    if (!email || !password || !firstName || !lastName) {
       return NextResponse.json(
-        { error: "Tous les champs obligatoires doivent être remplis." },
+        { error: "Veuillez remplir tous les champs obligatoires." },
         { status: 400 }
       );
     }
 
-    // Use admin client to create profile (bypasses RLS)
+    // Use admin client for privileged operations
     const admin = createAdminClient({
       baseUrl: INSFORGE_URL,
       apiKey: INSFORGE_API_KEY,
     });
 
-    // Create user profile in our users table
+    // Step 1: Create auth user via the standard server client
+    // The InsForge/Supabase admin client's signUp method creates the user
+    // If the platform has email confirmation disabled, the user is auto-confirmed
+    const regularClient = await createClient();
+    const { data: signUpData, error: signUpError } = await regularClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        },
+      },
+    });
+
+    if (signUpError) {
+      const message = String(signUpError?.message || "");
+      if (message.includes("already") || message.includes("existe") || message.includes("registered")) {
+        return NextResponse.json(
+          { error: "Un compte avec cet email existe déjà." },
+          { status: 409 }
+        );
+      }
+      console.error("Auth signup error:", message);
+      return NextResponse.json(
+        { error: "Erreur lors de la création du compte." },
+        { status: 500 }
+      );
+    }
+
+    const userId = signUpData?.user?.id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Erreur lors de la création du compte." },
+        { status: 500 }
+      );
+    }
+
+    // Try to auto-confirm the user using admin client
+    try {
+      await admin.database
+        .from("users")
+        .update({ is_active: true })
+        .eq("id", userId);
+    } catch {}
+
+    // Step 2: Create user profile in our users table
     const { error: profileError } = await admin.database.from("users").insert([{
       id: userId,
       email,
@@ -39,49 +86,82 @@ export async function POST(request: Request) {
       role: "EMPLOYEE",
       language: "fr",
       timezone: "Europe/Paris",
+      is_active: true,
     }]);
 
     if (profileError) {
       console.error("Profile creation error:", profileError);
-      return NextResponse.json(
-        { error: "Erreur lors de la création du profil." },
-        { status: 500 }
-      );
     }
 
-    // If company name provided, create organization
+    let orgId: string | null = null;
+
+    // Step 3: Create organization if company name provided
     if (companyName) {
       const slug = companyName
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
+        .replace(/^-|-$/g, "") || `org-${userId.slice(0, 8)}`;
 
       const { data: org, error: orgError } = await admin.database
         .from("organizations")
         .insert([{
           name: companyName,
-          slug: slug || `org-${userId.slice(0, 8)}`,
+          slug,
         }])
         .select()
         .single();
 
       if (org && !orgError) {
+        orgId = org.id;
+
+        // Add user as owner
         await admin.database.from("organization_members").insert([{
           organization_id: org.id,
           user_id: userId,
           role: "OWNER",
           is_owner: true,
         }]);
+
+        // Step 4: Create default workspace
+        const wsSlug = (companyName + "-workspace")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "") || `ws-${userId.slice(0, 8)}`;
+
+        const { data: ws, error: wsError } = await admin.database
+          .from("workspaces")
+          .insert([{
+            organization_id: org.id,
+            name: `${companyName} - Espace principal`,
+            slug: wsSlug,
+            settings: JSON.stringify({
+              enabledModules: workspace ? [workspace] : ["hr", "finance", "crm", "commerce", "sales", "inventory", "pharmacy", "education", "healthcare", "projects", "tasks", "calendar", "messages", "documents"],
+            }),
+            is_active: true,
+          }])
+          .select()
+          .single();
+
+        if (ws && !wsError) {
+          // Add user as workspace member
+          await admin.database.from("workspace_members").insert([{
+            workspace_id: ws.id,
+            user_id: userId,
+            role: "OWNER",
+          }]);
+        }
       }
     }
 
     return NextResponse.json({
+      success: true,
       user: {
         id: userId,
         email,
         firstName,
         lastName,
       },
+      organization: orgId ? { id: orgId } : null,
     });
   } catch (error) {
     console.error("Signup error:", error);

@@ -53,9 +53,9 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect to workspaces page (handles workspace selection/onboarding)
+      // Redirect to dashboard (will check for workspace)
       const locale = window.location.pathname.split('/')[1] || 'fr';
-      window.location.href = `/${locale}/workspaces`;
+      window.location.href = `/${locale}/dashboard`;
     } catch (err) {
       console.error('Login error:', err);
       setError(t('loginError'));

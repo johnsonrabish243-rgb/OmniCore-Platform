@@ -82,6 +82,58 @@ function isLanding(pathname: string): boolean {
   return landingPaths.some((p) => path === p);
 }
 
+/**
+ * Add security headers to every response.
+ * - CSP: Content Security Policy
+ * - XSS Protection
+ * - Frame protection (clickjacking)
+ * - Content type sniffing protection
+ * - Referrer policy
+ * - Permissions policy
+ */
+function addSecurityHeaders(response: NextResponse): void {
+  // Content Security Policy
+  response.headers.set(
+    "Content-Security-Policy",
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: blob: https://ui-avatars.com https://4majgdg3.us-east.insforge.app; " +
+    "font-src 'self' data:; " +
+    "connect-src 'self' https://4majgdg3.us-east.insforge.app wss://4majgdg3.us-east.insforge.app; " +
+    "frame-src 'self'; " +
+    "object-src 'none'; " +
+    "base-uri 'self'; " +
+    "form-action 'self'"
+  );
+  
+  // Prevent browsers from MIME-sniffing
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  
+  // XSS Protection (legacy, modern browsers use CSP)
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  
+  // Clickjacking protection
+  response.headers.set("X-Frame-Options", "DENY");
+  
+  // Referrer policy
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  
+  // Permissions policy (limit browser features)
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+  );
+  
+  // HTTP Strict Transport Security (HSTS)
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=63072000; includeSubDomains; preload"
+    );
+  }
+}
+
 function isProtected(pathname: string): boolean {
   const { path } = getPathWithoutLocale(pathname);
   return protectedPaths.some((p) => path === p || path.startsWith(p + "/"));
@@ -90,14 +142,17 @@ function isProtected(pathname: string): boolean {
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip for static assets and API routes
+  // Skip for static assets and API routes (API routes manage their own security)
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/favicon") ||
     pathname.includes(".")
   ) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    // Still add security headers
+    addSecurityHeaders(response);
+    return response;
   }
 
   // Use Supabase to refresh the session and get the authenticated user
@@ -129,6 +184,10 @@ export default async function proxy(request: NextRequest) {
   // Apply next-intl middleware and pass pathname as header
   const response = await intlMiddleware(request);
   response.headers.set("x-pathname", pathname);
+  
+  // Add security headers
+  addSecurityHeaders(response);
+  
   return response;
 }
 

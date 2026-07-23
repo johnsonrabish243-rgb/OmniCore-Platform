@@ -29,8 +29,20 @@
     "login": "Log in",
     "signup": "Sign up",
     "integrations": "Integrations",
+    "finance": "Finance",
+    "documents": "Documents",
     "workspace": "Workspace",
     "admin": "Administration"
+  },
+  "sidebar": {
+    "general": "General",
+    "modules": "Modules",
+    "documents": "Documents",
+    "finance": "Finance",
+    "activeWorkspace": "Active workspace",
+    "workspaces": "Workspaces",
+    "search": "Search...",
+    "loading": "Loading..."
   },
   "auth": {
     "welcome": "Welcome to OmniCore",
@@ -74,6 +86,7 @@
     "passwordMismatch": "Passwords do not match.",
     "accountExists": "An account with this email already exists.",
     "serverError": "Connection error to the server",
+    "captchaRequired": "Please complete the security verification.",
     "invalidCredentials": "Invalid email or password.",
     "accountDisabled": "This account has been disabled.",
     "profileNotFound": "User profile not found.",
@@ -910,5 +923,32 @@
     "darkMode": "Dark mode",
     "lightMode": "Light mode",
     "systemMode": "System mode"
+  },
+  "routeGuard": {
+    "moduleNotAvailable": "Module not available",
+    "moduleNotAvailableDesc": "This module is not enabled for your workspace. Please contact your administrator for more information.",
+    "backToDashboard": "Back to dashboard"
+  },
+  "globalSearch": {
+    "placeholder": "Search pages, modules, settings...",
+    "noResults": "No results found",
+    "noResultsDesc": "Try a different search term",
+    "general": "General",
+    "modules": "Modules",
+    "system": "System",
+    "navigate": "Navigate",
+    "open": "Open",
+    "close": "Close"
+  },
+  "omniCaptcha": {
+    "title": "Security verification",
+    "answerPlaceholder": "Your answer",
+    "verify": "Verify",
+    "refresh": "New challenge",
+    "verified": "✓ Verified",
+    "incorrect": "Incorrect answer. Try again.",
+    "loadError": "Unable to load captcha",
+    "verifyError": "Verification failed",
+    "footer": "Protected by OmniCaptcha"
   }
 }

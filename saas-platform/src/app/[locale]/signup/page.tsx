@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
+import { OmniCaptcha } from "@/components/omnicaptcha";
 import {
   Mail,
   Lock,
@@ -30,6 +31,8 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("");
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | undefined>();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -52,34 +55,20 @@ export default function SignUpPage() {
         return;
       }
 
-      // Step 1: Create auth user with browser client (sets cookies automatically)
-      const supabase = createClient();
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (authError) {
-        if (authError.message.includes('already')) {
-          setError(t('accountExists'));
-        } else {
-          setError(authError.message || t('serverError'));
-        }
+      if (!captchaVerified) {
+        setError(t('captchaRequired'));
+        setIsLoading(false);
         return;
       }
 
-      if (!authData.user) {
-        setError(t('serverError'));
-        return;
-      }
-
-      // Step 2: Create user profile + organization via server API
+      // Step 1: Create auth user via server API (handles auto-confirm)
+      // The server API uses admin client to auto-confirm and create session
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: authData.user.id,
           email,
+          password,
           firstName,
           lastName,
           companyName: company,
@@ -87,22 +76,20 @@ export default function SignUpPage() {
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const data = await res.json();
-        console.error('Profile creation error:', data.error);
-        // Profile creation failed but auth user exists — still redirect to login
+        if (data.error?.includes('already') || data.error?.includes('existe')) {
+          setError(t('accountExists'));
+        } else {
+          setError(data.error || t('serverError'));
+        }
+        return;
       }
 
-      // Check if user is already signed in (auto-confirm enabled) or needs verification
+      // Auto-confirmed: redirect directly to dashboard
       const locale = window.location.pathname.split('/')[1] || 'fr';
-      
-      if (authData.session) {
-        // Auto-confirmed: redirect to workspaces
-        window.location.href = `/${locale}/workspaces`;
-      } else {
-        // Email confirmation required: redirect to login with success message
-        window.location.href = `/${locale}/login?message=account_created`;
-      }
+      window.location.href = `/${locale}/dashboard`;
     } catch {
       setError(t('serverError'));
     } finally {
@@ -242,7 +229,7 @@ export default function SignUpPage() {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full h-11">
+                  <Button type="submit" className="w-full h-11" loading={isLoading}>
                     {t("continue")}
                   </Button>
                 </>
@@ -317,10 +304,19 @@ export default function SignUpPage() {
                     </label>
                   </div>
 
+                  {/* OmniCaptcha */}
+                  <OmniCaptcha
+                    onVerify={(verified, token) => {
+                      setCaptchaVerified(verified);
+                      if (token) setCaptchaToken(token);
+                    }}
+                  />
+
                   <Button
                     type="submit"
                     className="w-full h-11"
                     loading={isLoading}
+                    disabled={!captchaVerified}
                   >
                     {t("createAccount")}
                   </Button>

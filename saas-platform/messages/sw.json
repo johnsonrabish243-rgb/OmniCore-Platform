@@ -29,8 +29,20 @@
     "login": "Ingia",
     "signup": "Jisajili",
     "integrations": "Viunganisho",
+    "finance": "Fedha",
+    "documents": "Nyaraka",
     "workspace": "Sehemu ya kazi",
     "admin": "Usimamizi"
+  },
+  "sidebar": {
+    "general": "Mkuu",
+    "modules": "Moduli",
+    "documents": "Nyaraka",
+    "finance": "Fedha",
+    "activeWorkspace": "Sehemu hai ya kazi",
+    "workspaces": "Sehemu za kazi",
+    "search": "Tafuta...",
+    "loading": "Inapakia..."
   },
   "auth": {
     "welcome": "Karibu kwenye OmniCore",
@@ -74,6 +86,7 @@
     "passwordMismatch": "Nywila hazilingani.",
     "accountExists": "Akaunti yenye barua pepe hii tayari ipo.",
     "serverError": "Hitilafu ya muunganisho kwa seva",
+    "captchaRequired": "Tafadhali kamilisha uthibitisho wa usalama.",
     "invalidCredentials": "Barua pepe au nywila si sahihi.",
     "accountDisabled": "Akaunti hii imezimwa.",
     "profileNotFound": "Wasifu wa mtumiaji haujapatikana.",
@@ -892,5 +905,32 @@
     "darkMode": "Hali ya giza",
     "lightMode": "Hali ya mwanga",
     "systemMode": "Hali ya mfumo"
+  },
+  "routeGuard": {
+    "moduleNotAvailable": "Moduli haipatikani",
+    "moduleNotAvailableDesc": "Moduli hii haijawezeshwa kwa sehemu yako ya kazi. Tafadhali wasiliana na msimamizi wako kwa maelezo zaidi.",
+    "backToDashboard": "Rudi kwenye dashibodi"
+  },
+  "globalSearch": {
+    "placeholder": "Tafuta kurasa, moduli, mipangilio...",
+    "noResults": "Hakuna matokeo yaliyopatikana",
+    "noResultsDesc": "Jaribu neno tofauti la utafutaji",
+    "general": "Mkuu",
+    "modules": "Moduli",
+    "system": "Mfumo",
+    "navigate": "Endelea",
+    "open": "Fungua",
+    "close": "Funga"
+  },
+  "omniCaptcha": {
+    "title": "Uthibitisho wa usalama",
+    "answerPlaceholder": "Jibu lako",
+    "verify": "Thibitisha",
+    "refresh": "Changamoto mpya",
+    "verified": "✓ Imethibitishwa",
+    "incorrect": "Jibu si sahihi. Jaribu tena.",
+    "loadError": "Imeshindwa kupakia captcha",
+    "verifyError": "Uthibitisho umeshindwa",
+    "footer": "Inalindwa na OmniCaptcha"
   }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, ReactNode } from "react";
 import { useRouter } from "@/i18n/routing";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Shield, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ interface RouteGuardProps {
  */
 export function RouteGuard({ moduleId, children, fallback = "block" }: RouteGuardProps) {
   const router = useRouter();
+  const t = useTranslations("routeGuard");
   const [status, setStatus] = useState<"loading" | "allowed" | "blocked">("loading");
 
   useEffect(() => {
@@ -100,13 +102,13 @@ export function RouteGuard({ moduleId, children, fallback = "block" }: RouteGuar
                 <Shield className="h-8 w-8" />
               </div>
             </div>
-            <h2 className="text-xl font-semibold tracking-tight">Module non disponible</h2>
+            <h2 className="text-xl font-semibold tracking-tight">{t('moduleNotAvailable')}</h2>
             <p className="text-sm text-muted-foreground">
-              Ce module n'est pas activé pour votre espace de travail. Contactez votre administrateur pour plus d'informations.
+              {t('moduleNotAvailableDesc')}
             </p>
             <Button variant="outline" className="gap-2" onClick={() => router.push("/dashboard")}>
               <ArrowLeft className="h-4 w-4" />
-              Retour au tableau de bord
+              {t('backToDashboard')}
             </Button>
           </CardContent>
         </Card>
