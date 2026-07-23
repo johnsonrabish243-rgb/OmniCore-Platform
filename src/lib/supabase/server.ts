@@ -21,7 +21,13 @@ export async function createClient() {
       get(name: string) {
         return cookieStore.get(name)?.value;
       },
-    },
+      set(name: string, value: string, options?: any) {
+        cookieStore.set(name, value, options);
+      },
+      delete(name: string) {
+        cookieStore.delete(name);
+      },
+    } as any,
   });
 
   // Replace auth with the proxied version (typed as any for TS compatibility)
