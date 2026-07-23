@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("message") === "account_created") {
+      setSuccessMessage("Compte créé avec succès. Connectez-vous pour continuer.");
+      // Clean up the URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const supabase = createClient();
 
@@ -185,6 +195,12 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
+
+              {successMessage && (
+                <div className="rounded-[10px] bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">
+                  {successMessage}
+                </div>
+              )}
 
               {error && (
                 <div className="rounded-[10px] bg-destructive/10 p-3 text-sm text-destructive">
