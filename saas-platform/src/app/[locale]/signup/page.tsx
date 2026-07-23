@@ -23,6 +23,12 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState(1);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("");
 
   useEffect(() => {
@@ -40,13 +46,6 @@ export default function SignUpPage() {
     setIsLoading(true);
     setError("");
     try {
-      const firstName = (document.getElementById('firstName') as HTMLInputElement)?.value || '';
-      const lastName = (document.getElementById('lastName') as HTMLInputElement)?.value || '';
-      const company = (document.getElementById('company') as HTMLInputElement)?.value || '';
-      const email = (document.getElementById('email') as HTMLInputElement)?.value || '';
-      const password = (document.getElementById('password') as HTMLInputElement)?.value || '';
-      const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value || '';
-
       if (password !== confirmPassword) {
         setError(t('passwordMismatch'));
         setIsLoading(false);
@@ -177,12 +176,7 @@ export default function SignUpPage() {
         {/* Sign Up Card */}
         <Card className="border-border/50 shadow-xl">
           <CardContent className="p-6">
-            {/* Invitation-only notice */}
-            <div className="p-4 rounded-[12px] bg-primary/5 border border-primary/20 mb-4">
-              <p className="text-sm text-center text-muted-foreground">
-                {t("invitationOnly")}
-              </p>
-            </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {step === 1 ? (
                 <>
@@ -198,6 +192,8 @@ export default function SignUpPage() {
                           id="firstName"
                           placeholder="Jean"
                           className="pl-9"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
                           required
                         />
                       </div>
@@ -206,7 +202,7 @@ export default function SignUpPage() {
                       <label className="text-sm font-medium" htmlFor="lastName">
                         {t("lastName")}
                       </label>
-                      <Input id="lastName" placeholder="Dupont" required />
+                      <Input id="lastName" placeholder="Dupont" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                     </div>
                   </div>
 
@@ -222,6 +218,8 @@ export default function SignUpPage() {
                         type="email"
                         placeholder={t("emailPlaceholder")}
                         className="pl-9"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         required
                       />
                     </div>
@@ -238,6 +236,8 @@ export default function SignUpPage() {
                         id="company"
                         placeholder="Ma Société SAS"
                         className="pl-9"
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
                       />
                     </div>
                   </div>
@@ -260,6 +260,8 @@ export default function SignUpPage() {
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         className="pl-9 pr-9"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         required
                       />
                       <button
@@ -288,6 +290,8 @@ export default function SignUpPage() {
                         type="password"
                         placeholder="••••••••"
                         className="pl-9"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
                         required
                       />
                     </div>
