@@ -18,8 +18,8 @@ export function LocaleSwitcher() {
 
   const locales = [
     { code: "fr", label: t("french"), flag: "🇫🇷" },
-    { code: "en", label: t("english"), flag: "🇬🇧" },
-    { code: "sw", label: t("swahili"), flag: "🇰🇪" },
+    { code: "en", label: t("english"), flag: "🇺🇸🇬🇧" },
+    { code: "sw", label: t("swahili"), flag: "🇨🇩" },
   ];
   const pathname = usePathname();
   const router = useRouter();

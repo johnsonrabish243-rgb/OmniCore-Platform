@@ -475,13 +475,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Type de contenu invalide" }, { status: 415 });
     }
 
-    const origin = req.headers.get("origin") || "";
-    const host = req.headers.get("host") || "";
-    const vercelUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
-    if (origin && !origin.includes(host) && !origin.includes(vercelUrl) && !origin.includes("localhost")) {
-      return NextResponse.json({ error: "Origine non autorisée" }, { status: 403 });
-    }
-
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Veuillez vous connecter pour utiliser l'assistant OmniCore AI." }, { status: 401 });
