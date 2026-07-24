@@ -472,6 +472,22 @@ function getResponse(message: string, lang: "fr" | "en" | "sw", previousMessages
   return responses.default[lang];
 }
 
+function localeError(locale: string, fr: string, en: string, sw: string): string {
+  if (locale === "en") return en;
+  if (locale === "sw") return sw;
+  return fr;
+}
+
+async function tryParseLocale(req: Request): Promise<string> {
+  try {
+    const clone = req.clone();
+    const body = await clone.json();
+    return body?.locale || "fr";
+  } catch {
+    return "fr";
+  }
+}
+
 export async function POST(req: Request) {
   try {
     if (!validateCSRFRequest(req)) {
@@ -483,16 +499,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Type de contenu invalide" }, { status: 415 });
     }
 
+    const requestLocale = await tryParseLocale(req);
+
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Veuillez vous connecter pour utiliser l'assistant OmniCore AI." }, { status: 401 });
+      return NextResponse.json(
+        { error: localeError(requestLocale, "Veuillez vous connecter pour utiliser l'assistant OmniCore AI.", "Please log in to use the OmniCore AI assistant.", "Tafadhali ingia ili kutumia msaidizi wa OmniCore AI.") },
+        { status: 401 }
+      );
     }
 
     const ip = getClientIdentifier(req);
     const burstCheck = checkBurst(ip);
     if (!burstCheck.allowed) {
       return NextResponse.json(
-        { error: `Trop de requêtes. Réessayez dans ${burstCheck.retryAfter} secondes.` },
+        { error: localeError(requestLocale, `Trop de requêtes. Réessayez dans ${burstCheck.retryAfter} secondes.`, `Too many requests. Try again in ${burstCheck.retryAfter} seconds.`, `Maombi mengi sana. Jaribu tena baada ya sekunde ${burstCheck.retryAfter}.`) },
         { status: 429, headers: { "Retry-After": String(burstCheck.retryAfter), "X-RateLimit-Limit": String(BURST_LIMIT), "X-RateLimit-Remaining": "0" } }
       );
     }
@@ -500,15 +521,18 @@ export async function POST(req: Request) {
     const rateCheck = await checkRateLimit("chat", `user:${user.id}`);
     if (!rateCheck.allowed) {
       return NextResponse.json(
-        { error: `Limite de messages atteinte. Réessayez dans ${rateCheck.retryAfter} secondes.` },
+        { error: localeError(requestLocale, `Limite de messages atteinte. Réessayez dans ${rateCheck.retryAfter} secondes.`, `Message limit reached. Try again in ${rateCheck.retryAfter} seconds.`, `Kikomo cha ujumbe kimefikiwa. Jaribu tena baada ya sekunde ${rateCheck.retryAfter}.`) },
         { status: 429, headers: { "Retry-After": String(rateCheck.retryAfter), "X-RateLimit-Limit": "5", "X-RateLimit-Remaining": String(rateCheck.remaining) } }
       );
     }
 
     const body = await req.json();
-    const { messages, locale: requestLocale } = body;
+    const { messages } = body;
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return NextResponse.json({ error: "Messages requis" }, { status: 400 });
+      return NextResponse.json(
+        { error: localeError(requestLocale, "Messages requis", "Messages required", "Ujumbe unahitajika") },
+        { status: 400 }
+      );
     }
 
     const sanitizedMessages = messages.map((m: { role: string; content: string }) => ({
@@ -518,14 +542,20 @@ export async function POST(req: Request) {
 
     for (const msg of sanitizedMessages) {
       if (msg.content.length === 0) {
-        return NextResponse.json({ error: "Message invalide" }, { status: 400 });
+        return NextResponse.json(
+          { error: localeError(requestLocale, "Message invalide", "Invalid message", "Ujumbe batili") },
+          { status: 400 }
+        );
       }
     }
 
     const scriptPattern = /[\u0000-\u001F]|[\u007F-\u009F]|\\u00[0-9a-fA-F]{2}|javascript:|data:|vbscript:/i;
     for (const msg of sanitizedMessages) {
       if (scriptPattern.test(msg.content)) {
-        return NextResponse.json({ error: "Message invalide" }, { status: 400 });
+        return NextResponse.json(
+          { error: localeError(requestLocale, "Message invalide", "Invalid message", "Ujumbe batili") },
+          { status: 400 }
+        );
       }
     }
 
