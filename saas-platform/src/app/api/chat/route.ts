@@ -4,7 +4,6 @@ import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
 import { validateCSRFRequest } from "@/lib/csrf";
 
 const MAX_MESSAGE_LENGTH = 2000;
-const ALLOWED_ORIGINS = ["https://omnicore.site", "http://localhost:3000"];
 
 export const dynamic = "force-dynamic";
 
@@ -115,7 +114,7 @@ function normWords(text: string): string[] {
   return n.split(/\s+/).filter(Boolean);
 }
 
-function detectLanguage(text: string): "fr" | "en" | "sw" {
+function detectLanguage(text: string, preferredLocale?: string): "fr" | "en" | "sw" {
   const swWords = ["habari", "msaada", "tafadhali", "asante", "sawa", "ndiyo", "hapana", "mfanyakazi", "mwanafunzi", "mgonjwa", "dawa", "hesabu", "ankara", "bidhaa", "agizo", "hisa", "kozi", "darasa", "mwalimu", "ratiba", "kazi", "mkutano", "ripoti", "taarifa", "nyaraka", "malipo", "wafanyakazi", "wanafunzi", "wagonjwa", "biashara", "fedha", "afya", "elimu", "famasia", "miradi", "mipangilio", "wasifu"];
   const frWords = ["bonjour", "merci", "svp", "aide", "employe", "facture", "client", "produit", "commande", "stock", "medicament", "patient", "rdv", "eleve", "professeur", "cours", "classe", "projet", "tache", "calendrier", "parametres", "profil", "espace", "tableau", "comment", "pourquoi", "confidentialite", "entreprise", "societe", "mission", "vision", "equipe", "logo", "contact", "politique", "conditions", "cookies", "droits", "veuillez", "donnees", "protection"];
   const enWords = ["hello", "help", "please", "thank", "how", "what", "why", "where", "when", "employee", "invoice", "customer", "product", "order", "dashboard", "settings", "profile", "workspace", "project", "privacy", "policy", "data", "protection", "cookie", "about", "company", "mission", "vision", "team", "founder", "logo", "brand", "contact", "information", "terms", "rights", "access", "delete", "personal", "export", "file", "report", "error", "issue", "solution", "feature", "module"];
@@ -125,6 +124,10 @@ function detectLanguage(text: string): "fr" | "en" | "sw" {
   let swScore = swWords.filter(w => n.includes(w)).length;
   let frScore = frWords.filter(w => n.includes(w)).length;
   let enScore = enWords.filter(w => n.includes(w)).length;
+
+  if (preferredLocale === "sw" && swScore >= frScore && swScore >= enScore) return "sw";
+  if (preferredLocale === "fr" && frScore >= swScore) return "fr";
+  if (preferredLocale === "en" && enScore >= frScore) return "en";
 
   if (swScore > frScore && swScore > enScore) return "sw";
   if (frScore >= enScore) return "fr";
@@ -472,8 +475,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Type de contenu invalide" }, { status: 415 });
     }
 
-    const origin = req.headers.get("origin") || req.headers.get("referer") || "";
-    if (origin && !ALLOWED_ORIGINS.some(o => origin.startsWith(o))) {
+    const origin = req.headers.get("origin") || "";
+    const host = req.headers.get("host") || "";
+    const vercelUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+    if (origin && !origin.includes(host) && !origin.includes(vercelUrl) && !origin.includes("localhost")) {
       return NextResponse.json({ error: "Origine non autorisée" }, { status: 403 });
     }
 
@@ -500,7 +505,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { messages } = body;
+    const { messages, locale: requestLocale } = body;
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "Messages requis" }, { status: 400 });
     }
@@ -527,7 +532,7 @@ export async function POST(req: Request) {
     const lastUserMessage = allUserMessages[allUserMessages.length - 1] || "";
     const previousMessages = allUserMessages.slice(0, -1);
 
-    const lang = detectLanguage(lastUserMessage);
+    const lang = detectLanguage(lastUserMessage, requestLocale);
     const response = getResponse(lastUserMessage, lang, previousMessages);
 
     const safeResponse = response.replace(/javascript:|data:|<script|<\/script>/gi, "");

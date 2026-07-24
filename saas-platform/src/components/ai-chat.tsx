@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,7 @@ export function AIChat({
   position = "bottom-right",
 }: AIChatProps) {
   const t = useTranslations("ai");
+  const locale = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -120,6 +121,7 @@ export function AIChat({
           method: "POST",
           headers: CSRF_HEADERS,
           body: JSON.stringify({
+            locale,
             messages: [...messages, userMessage].map(({ role, content }) => ({
               role,
               content,
