@@ -5,6 +5,7 @@ import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
 import { validateCSRFRequest } from "@/lib/csrf";
 import { generateVerificationToken } from "@/lib/verification-token";
 import { sendVerificationEmail } from "@/lib/email-service";
+import { isTokenUsed, sensitiveRateLimiter } from "@/lib/omnicaptcha";
 
 const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL || "";
 const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY || "";
@@ -25,7 +26,17 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { email, password, firstName, lastName, companyName, locale } = body;
+    const { email, password, firstName, lastName, companyName, locale, captchaToken } = body;
+
+    if (!captchaToken) {
+      return NextResponse.json({ error: "Veuillez compléter la vérification de sécurité." }, { status: 400 });
+    }
+
+    if (!isTokenUsed(captchaToken)) {
+      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+      sensitiveRateLimiter.check(`captcha:abuse:${ip}`);
+      return NextResponse.json({ error: "Vérification de sécurité échouée. Veuillez réessayer." }, { status: 400 });
+    }
 
     if (!email || !password || !firstName || !lastName) {
       return NextResponse.json({ error: "Veuillez remplir tous les champs obligatoires." }, { status: 400 });

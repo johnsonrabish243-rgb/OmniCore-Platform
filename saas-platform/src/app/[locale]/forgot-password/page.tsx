@@ -17,6 +17,7 @@ export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string>();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +34,7 @@ export default function ForgotPasswordPage() {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { ...getCSRFHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, captchaToken }),
       });
       const data = await res.json();
 
@@ -114,7 +115,10 @@ export default function ForgotPasswordPage() {
               </div>
 
               <OmniCaptcha
-                onVerify={(verified) => setCaptchaVerified(verified)}
+                onVerify={(verified, token) => {
+                  setCaptchaVerified(verified);
+                  if (token) setCaptchaToken(token);
+                }}
                 invisible
               />
 

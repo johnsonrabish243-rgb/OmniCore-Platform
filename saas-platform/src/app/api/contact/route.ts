@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
 import { validateCSRFRequest } from "@/lib/csrf";
-import { verifyChallenge } from "@/lib/omnicaptcha";
+import { isTokenUsed, sensitiveRateLimiter } from "@/lib/omnicaptcha";
 
 const VALID_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -31,11 +31,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Données invalides" }, { status: 400 });
     }
 
-    if (body.captchaToken) {
-      const captchaResult = verifyChallenge(body.captchaToken, body.captchaAnswer || "");
-      if (!captchaResult.valid) {
-        return NextResponse.json({ error: "Vérification de sécurité échouée." }, { status: 403 });
-      }
+    if (!body.captchaToken || !isTokenUsed(body.captchaToken)) {
+      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+      sensitiveRateLimiter.check(`captcha:abuse:${ip}`);
+      return NextResponse.json({ error: "Vérification de sécurité échouée." }, { status: 400 });
     }
 
     const supabase = await createClient();

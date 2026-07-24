@@ -28,6 +28,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string>();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -56,7 +57,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { ...getCSRFHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, locale }),
+        body: JSON.stringify({ email, password, locale, captchaToken }),
       });
 
       const data = await res.json();
@@ -163,7 +164,10 @@ export default function LoginPage() {
               </div>
 
               <OmniCaptcha
-                onVerify={(verified) => setCaptchaVerified(verified)}
+                onVerify={(verified, token) => {
+                  setCaptchaVerified(verified);
+                  if (token) setCaptchaToken(token);
+                }}
                 invisible
               />
 

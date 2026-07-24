@@ -4,7 +4,7 @@ const SECRET: string = process.env.OMNICAPTCHA_SECRET || process.env.INSFORGE_AP
   if (process.env.NODE_ENV === "production") {
     throw new Error("OMNICAPTCHA_SECRET is required in production");
   }
-  return ""; // dev only
+  return "dev-secret-do-not-use-in-prod";
 })();
 
 const TOKEN_TTL_MS = 5 * 60 * 1000;
@@ -27,8 +27,15 @@ export interface CaptchaVerifyResult {
   reason?: string;
 }
 
+let usedTokens = new Set<string>();
+const USED_TOKEN_CLEANUP_INTERVAL = 10 * 60 * 1000;
+
+setInterval(() => {
+  usedTokens.clear();
+}, USED_TOKEN_CLEANUP_INTERVAL);
+
 function generateId(): string {
-  return randomInt(100000, 999999).toString();
+  return randomBytes(16).toString("hex");
 }
 
 function signPayload(payload: string): string {
@@ -38,33 +45,35 @@ function signPayload(payload: string): string {
 }
 
 function createToken(challengeId: string, answer: string): string {
+  const nonce = randomBytes(8).toString("hex");
   const expiresAt = Date.now() + TOKEN_TTL_MS;
-  const raw = `${challengeId}:${answer}:${expiresAt}`;
+  const raw = `${challengeId}:${answer}:${expiresAt}:${nonce}`;
   const sig = signPayload(raw);
   return Buffer.from(`${raw}:${sig}`).toString("base64url");
 }
 
-function parseToken(token: string): { challengeId: string; answer: string; expiresAt: number; sig: string } | null {
+function parseToken(token: string): { challengeId: string; answer: string; expiresAt: number; nonce: string; sig: string } | null {
   try {
     const decoded = Buffer.from(token, "base64url").toString("utf-8");
     const parts = decoded.split(":");
-    if (parts.length !== 4) return null;
+    if (parts.length !== 5) return null;
     return {
       challengeId: parts[0],
       answer: parts[1],
       expiresAt: parseInt(parts[2], 10),
-      sig: parts[3],
+      nonce: parts[3],
+      sig: parts[4],
     };
   } catch {
     return null;
   }
 }
 
-function verifyTokenSignature(challengeId: string, answer: string, expiresAt: number, sig: string): boolean {
-  const raw = `${challengeId}:${answer}:${expiresAt}`;
+function verifyTokenSignature(challengeId: string, answer: string, expiresAt: number, nonce: string, sig: string): boolean {
+  const raw = `${challengeId}:${answer}:${expiresAt}:${nonce}`;
   const expectedSig = signPayload(raw);
   try {
-    return timingSafeEqual(Buffer.from(sig), Buffer.from(expectedSig));
+    return timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expectedSig, "hex"));
   } catch {
     return false;
   }
@@ -196,10 +205,16 @@ function generateCountShapesChallenge(locale: ChallengeLocale): { question: stri
   };
 }
 
-export function generateChallenge(type: ChallengeType = "math", locale: ChallengeLocale = "fr"): CaptchaChallenge {
+function getRandomChallengeType(): ChallengeType {
+  const types: ChallengeType[] = ["math", "math-basic", "word-math", "count-shapes"];
+  return types[randomInt(0, types.length)];
+}
+
+export function generateChallenge(type?: ChallengeType, locale: ChallengeLocale = "fr"): CaptchaChallenge {
+  const effectiveType = type || getRandomChallengeType();
   let challenge: { question: string; answer: string; hint?: string };
 
-  switch (type) {
+  switch (effectiveType) {
     case "math": challenge = generateMathChallenge(locale); break;
     case "math-basic": challenge = generateBasicMathChallenge(locale); break;
     case "word-math": challenge = generateWordMathChallenge(locale); break;
@@ -210,7 +225,7 @@ export function generateChallenge(type: ChallengeType = "math", locale: Challeng
   const id = generateId();
   const token = createToken(id, challenge.answer);
 
-  return { id, type, question: challenge.question, hint: challenge.hint, token, locale };
+  return { id, type: effectiveType, question: challenge.question, hint: challenge.hint, token, locale };
 }
 
 export function verifyChallenge(token: string, userAnswer: string): CaptchaVerifyResult {
@@ -219,7 +234,9 @@ export function verifyChallenge(token: string, userAnswer: string): CaptchaVerif
 
   if (Date.now() > parsed.expiresAt) return { valid: false, reason: "Token expired" };
 
-  if (!verifyTokenSignature(parsed.challengeId, parsed.answer, parsed.expiresAt, parsed.sig)) {
+  if (usedTokens.has(token)) return { valid: false, reason: "Token already used" };
+
+  if (!verifyTokenSignature(parsed.challengeId, parsed.answer, parsed.expiresAt, parsed.nonce, parsed.sig)) {
     return { valid: false, reason: "Invalid token signature" };
   }
 
@@ -228,7 +245,13 @@ export function verifyChallenge(token: string, userAnswer: string): CaptchaVerif
 
   if (normalizedAnswer !== expectedAnswer) return { valid: false, reason: "Incorrect answer" };
 
+  usedTokens.add(token);
+
   return { valid: true };
+}
+
+export function isTokenUsed(token: string): boolean {
+  return usedTokens.has(token);
 }
 
 export class MemoryRateLimiter {
@@ -257,3 +280,5 @@ export class MemoryRateLimiter {
 }
 
 export const captchaRateLimiter = new MemoryRateLimiter(10, 60_000);
+
+export const sensitiveRateLimiter = new MemoryRateLimiter(3, 60_000);

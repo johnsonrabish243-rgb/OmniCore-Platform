@@ -1,31 +1,32 @@
 import { NextResponse } from "next/server";
 import { verifyChallenge, captchaRateLimiter } from "@/lib/omnicaptcha";
 
-/**
- * POST /api/captcha/verify
- * Verifies a user's answer against a captcha token.
- * Rate-limited to prevent brute-force attacks.
- */
 export async function POST(request: Request) {
   try {
+    const csrfHeader = request.headers.get("x-requested-with");
+    if (csrfHeader !== "XMLHttpRequest") {
+      return NextResponse.json(
+        { valid: false, error: "CSRF validation failed." },
+        { status: 403 }
+      );
+    }
+
     const { token, answer } = await request.json();
 
     if (!token || !answer) {
       return NextResponse.json(
-        { valid: false, error: "Token et réponse requis." },
+        { valid: false, error: "Token and answer are required." },
         { status: 400 }
       );
     }
 
-    // Get client IP for rate limiting
     const forwarded = request.headers.get("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim() || "unknown";
 
-    // Rate limit: max 10 verification attempts per minute per IP
     const rateCheck = captchaRateLimiter.check(`captcha:verify:${ip}`);
     if (!rateCheck.allowed) {
       return NextResponse.json(
-        { valid: false, error: "Trop de tentatives. Réessayez dans une minute." },
+        { valid: false, error: "Too many attempts. Try again later." },
         { status: 429, headers: { "Retry-After": "60" } }
       );
     }
@@ -33,10 +34,9 @@ export async function POST(request: Request) {
     const result = verifyChallenge(token, answer);
 
     return NextResponse.json(result);
-  } catch (error) {
-    console.error("Captcha verify error");
+  } catch {
     return NextResponse.json(
-      { valid: false, error: "Erreur lors de la vérification." },
+      { valid: false, error: "Verification failed." },
       { status: 500 }
     );
   }

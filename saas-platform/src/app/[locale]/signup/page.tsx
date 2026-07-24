@@ -77,6 +77,7 @@ export default function SignUpPage() {
           companyName: company,
           locale,
           acceptedTerms,
+          captchaToken,
         }),
       });
 
