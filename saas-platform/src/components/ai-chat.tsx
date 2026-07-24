@@ -12,6 +12,7 @@ import {
   Sparkles,
   Loader2,
   ChevronDown,
+  AlertTriangle,
 } from "lucide-react";
 
 interface Message {
@@ -39,6 +40,7 @@ export function AIChat({
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +82,21 @@ export function AIChat({
             })),
           }),
         });
+
+        if (res.status === 429) {
+          const data = await res.json();
+          setRateLimited(true);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `rate-limited-${Date.now()}`,
+              role: "assistant",
+              content: data.error || t("errorMessage"),
+            },
+          ]);
+          setTimeout(() => setRateLimited(false), 60000);
+          return;
+        }
 
         if (!res.ok) {
           throw new Error("API request failed");
@@ -151,8 +168,8 @@ export function AIChat({
           {/* Header */}
           <div className="flex items-center justify-between bg-gradient-to-r from-primary to-purple-600 px-4 py-3 text-white">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
-                <Sparkles className="h-4 w-4" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm overflow-hidden">
+                <img src="/omnicore-logo.png" alt="OmniCore" className="h-6 w-6 object-contain" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold">{t("assistantTitle")}</h3>
@@ -267,10 +284,16 @@ export function AIChat({
                     className="flex-1 h-9 text-sm rounded-[10px] border-border/50"
                     disabled={isLoading}
                   />
+                  {rateLimited && (
+                    <div className="flex items-center gap-1 text-[10px] text-amber-500 mr-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>Limite atteinte</span>
+                    </div>
+                  )}
                   <Button
                     type="submit"
                     size="icon-sm"
-                    disabled={isLoading || !input.trim()}
+                    disabled={isLoading || rateLimited || !input.trim()}
                     className="shrink-0 rounded-[10px]"
                   >
                     {isLoading ? (
@@ -281,7 +304,7 @@ export function AIChat({
                   </Button>
                 </form>
                 <p className="text-[9px] text-muted-foreground/50 text-center mt-1.5">
-                  {t("footer")}
+                  Powered by <span className="font-semibold">OmniCore</span> AI
                 </p>
               </div>
             </div>

@@ -42,6 +42,7 @@ function getRateLimitConfig(endpoint: string): { maxAttempts: number; windowMs: 
     "reset-password": { maxAttempts: 5, windowMs: 15 * 60 * 1000 },
     "change-password": { maxAttempts: 5, windowMs: 15 * 60 * 1000 },
     captcha: { maxAttempts: 10, windowMs: 60 * 1000 },
+    chat: { maxAttempts: 5, windowMs: 60 * 1000 },
   };
   return configs[endpoint] || { maxAttempts: 10, windowMs: 60 * 1000 };
 }

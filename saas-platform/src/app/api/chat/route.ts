@@ -1,7 +1,33 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
 
 export const dynamic = "force-dynamic";
+
+const BURST_LIMIT = 3;
+const BURST_WINDOW_MS = 15000;
+const burstTracker = new Map<string, { count: number; resetAt: number }>();
+
+function checkBurst(ip: string): { allowed: boolean; retryAfter: number } {
+  const now = Date.now();
+  const entry = burstTracker.get(ip);
+  if (!entry || now > entry.resetAt) {
+    burstTracker.set(ip, { count: 1, resetAt: now + BURST_WINDOW_MS });
+    return { allowed: true, retryAfter: 0 };
+  }
+  if (entry.count >= BURST_LIMIT) {
+    return { allowed: false, retryAfter: Math.ceil((entry.resetAt - now) / 1000) };
+  }
+  entry.count++;
+  return { allowed: true, retryAfter: 0 };
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of burstTracker) {
+    if (now > val.resetAt) burstTracker.delete(key);
+  }
+}, 60000);
 
 function detectLanguage(text: string): "fr" | "en" | "sw" {
   const swWords = [
@@ -9,13 +35,20 @@ function detectLanguage(text: string): "fr" | "en" | "sw" {
     "mfanyakazi", "mwanafunzi", "mgonjwa", "dawa", "hesabu", "ankara",
     "bidhaa", "agizo", "hisa", "kozi", "darasa", "mwalimu", "ratiba",
     "kazi", "mkutano", "ripoti", "taarifa", "nyaraka", "malipo",
+    "wafanyakazi", "wanafunzi", "wagonjwa", "biashara", "fedha", "afya",
+    "elimu", "famasia", "miradi", "mipangilio", "wasifu",
   ];
   const frWords = [
     "bonjour", "merci", "svp", "aide", "employé", "facture", "client",
     "produit", "commande", "stock", "médicament", "patient", "rdv",
     "élève", "professeur", "cours", "classe", "projet", "tâche",
     "calendrier", "paramètres", "profil", "espace", "tableau de bord",
-    "comment", "pourquoi", "pouvez-vous", "aide-moi",
+    "comment", "pourquoi", "pouvez-vous", "aide-moi", "s'il vous plaît",
+    "merci beaucoup", "je voudrais", "je veux", "expliquez", "donnez",
+    "confidentialité", "privacy", "rgpd", "données", "protection",
+    "entreprise", "société", "mission", "vision", "équipe", "fondateur",
+    "logo", "marque", "à propos", "contact", "coordonnées",
+    "politique", "conditions", "cookies", "droits",
   ];
 
   const lower = text.toLowerCase();
@@ -23,28 +56,32 @@ function detectLanguage(text: string): "fr" | "en" | "sw" {
   let frScore = 0;
   let enScore = 0;
 
-  for (const w of swWords) {
-    if (lower.includes(w)) swScore++;
-  }
-  for (const w of frWords) {
-    if (lower.includes(w)) frScore++;
-  }
+  for (const w of swWords) { if (lower.includes(w)) swScore++; }
+  for (const w of frWords) { if (lower.includes(w)) frScore++; }
 
   const enWords = [
     "hello", "help", "please", "thank", "how", "what", "why", "where",
     "when", "employee", "invoice", "customer", "product", "order",
     "dashboard", "settings", "profile", "workspace", "project",
+    "privacy", "policy", "gdp", "data", "protection", "cookie",
+    "about", "company", "mission", "vision", "team", "founder",
+    "logo", "brand", "contact", "information", "terms", "conditions",
+    "rights", "access", "delete", "personal",
   ];
-  for (const w of enWords) {
-    if (lower.includes(w)) enScore++;
-  }
+  for (const w of enWords) { if (lower.includes(w)) enScore++; }
 
   if (swScore > frScore && swScore > enScore) return "sw";
   if (frScore >= enScore) return "fr";
   return "en";
 }
 
-const responses: Record<string, { fr: string; en: string; sw: string }> = {
+interface ResponseMap {
+  fr: string;
+  en: string;
+  sw: string;
+}
+
+const responses: Record<string, ResponseMap> = {
   dashboard: {
     fr: "Le tableau de bord OmniCore vous offre une vue d'ensemble de votre activité. Vous y trouverez des graphiques sur les ventes, les revenus, les employés actifs et les indicateurs clés. Utilisez les filtres en haut pour personnaliser l'affichage par période ou par module.",
     en: "The OmniCore dashboard gives you a complete overview of your business. You'll find charts on sales, revenue, active employees, and key metrics. Use the filters at the top to customize the view by period or module.",
@@ -180,65 +217,138 @@ const responses: Record<string, { fr: string; en: string; sw: string }> = {
     en: "Workspaces let you separate your activities by organization or project. Manage them from Administration > Workspaces. Each workspace has its own modules and members.",
     sw: "Nafasi za kazi hukuruhusu kutenganisha shughuli zako kwa shirika au mradi. Zisimamie kutoka Usimamizi > Nafasi za kazi. Kila nafasi ina moduli na wanachama wake.",
   },
+  privacy: {
+    fr: "OmniCore prend très au sérieux la protection de vos données personnelles. Notre politique de confidentialité est conforme au RGPD et à la loi congolaise. Nous collectons uniquement les données nécessaires au fonctionnement de la plateforme : nom, email, rôle et préférences. Vos données sont stockées de manière sécurisée chez nos hébergeurs certifiés. Vous disposez d'un droit d'accès, de rectification, de suppression et de portabilité de vos données. Pour exercer ces droits, contactez-nous à privacy@omnicore.site. Consultez notre politique complète dans la section Confidentialité.",
+    en: "OmniCore takes your data privacy very seriously. Our privacy policy is GDPR-compliant and follows Congolese law. We only collect data necessary for the platform: name, email, role, and preferences. Your data is stored securely with certified hosting providers. You have the right to access, rectify, delete, and port your data. To exercise these rights, contact us at privacy@omnicore.site. See our full policy in the Privacy section.",
+    sw: "OmniCore inachukua usiri wa data yako kwa uzito sana. Sera yetu ya faragha inatii GDPR na sheria ya Kongo. Tunakusanya data muhimu tu kwa uendeshaji wa jukwaa: jina, barua pepe, wadhifa na mapendeleo. Data yako imehifadhiwa kwa usalama kwa watoa huduma waliothibitishwa. Una haki ya kufikia, kurekebisha, kufuta na kuhamisha data yako. Kutumia haki hizi, wasiliana nasi kwa privacy@omnicore.site. Tazama sera yetu kamili katika sehemu ya Faragha.",
+  },
+  cookies: {
+    fr: "OmniCore utilise des cookies essentiels pour le fonctionnement de la plateforme. Ces cookies sont nécessaires à l'authentification, à la sécurité et à la mémorisation de vos préférences (thème, langue). Nous n'utilisons pas de cookies publicitaires ou de traçage tiers. Vous pouvez gérer vos préférences de cookies dans les paramètres de votre navigateur. Pour plus d'informations, consultez notre politique de cookies.",
+    en: "OmniCore uses essential cookies for platform functionality. These cookies are necessary for authentication, security, and remembering your preferences (theme, language). We do not use advertising or third-party tracking cookies. You can manage cookie preferences in your browser settings. For more information, see our Cookie Policy.",
+    sw: "OmniCore hutumia vidakuzi muhimu kwa uendeshaji wa jukwaa. Vidakuzi hivi ni muhimu kwa uthibitishaji, usalama na kukumbuka mapendeleo yako (mandhari, lugha). Hatutumii vidakuzi vya matangazo au ufuatiliaji wa watu wengine. Unaweza kudhibiti mapendeleo ya vidakuzi katika mipangilio ya kivinjari chako. Kwa maelezo zaidi, tazama Sera yetu ya Vidakuzi.",
+  },
+  about: {
+    fr: "OmniCore est une plateforme ERP cloud moderne basée à Kalemie, dans la province du Tanganyika, en République Démocratique du Congo. Notre mission est de digitaliser et simplifier la gestion des entreprises congolaises avec des outils adaptés au contexte local. Notre vision : devenir le leader des solutions de gestion intégrées en Afrique centrale. Nous proposons des modules RH, Finance, Commerce, Pharmacie, Santé, Éducation, Projets et CRM — le tout dans une plateforme unifiée et multilingue (français, anglais, swahili). L'équipe OmniCore est dirigée par John Mocket et une équipe passionnée de développeurs et d'experts métier congolais.",
+    en: "OmniCore is a modern cloud ERP platform based in Kalemie, Tanganyika Province, Democratic Republic of Congo. Our mission is to digitize and simplify business management for Congolese companies with tools adapted to the local context. Our vision: to become the leading integrated management solutions provider in Central Africa. We offer HR, Finance, Commerce, Pharmacy, Healthcare, Education, Projects, and CRM modules — all in one unified, multilingual platform (French, English, Swahili). The OmniCore team is led by John Mocket and a passionate team of Congolese developers and business experts.",
+    sw: "OmniCore ni jukwaa la kisasa la ERP la wingu lenye makao yake Kalemie, Mkoa wa Tanganyika, Jamhuri ya Kidemokrasia ya Kongo. Dhamira yetu ni kudigitalisha na kurahisisha usimamizi wa biashara kwa makampuni ya Kongo kwa zana zinazofaa mazingira ya ndani. Maono yetu: kuwa kiongozi wa suluhisho za usimamizi jumuishi Afrika ya Kati. Tunatoa moduli za HR, Fedha, Biashara, Famasia, Afya, Elimu, Miradi na CRM — zote katika jukwaa moja la lugha nyingi (Kifaransa, Kiingereza, Kiswahili). Timu ya OmniCore inaongozwa na John Mocket na timu ya wazalendo ya wasanidi programu na wataalam wa biashara wa Kongo.",
+  },
+  logo: {
+    fr: "Le logo OmniCore représente notre vision d'une plateforme complète et unifiée. Il est composé d'un design moderne aux couleurs bleu et violet, symbolisant la confiance et l'innovation. Vous trouverez le logo dans tous les supports de la plateforme : page d'accueil, en-tête, barre latérale, et icône de l'application. Il est disponible au format PNG et SVG dans le dossier public de l'application.",
+    en: "The OmniCore logo represents our vision of a complete and unified platform. It features a modern design in blue and purple, symbolizing trust and innovation. You will find the logo throughout the platform: homepage, header, sidebar, and app icon. It is available in PNG and SVG formats in the application's public folder.",
+    sw: "Nembo ya OmniCore inawakilisha maono yetu ya jukwaa kamili na lililounganishwa. Ina muundo wa kisasa wa rangi ya bluu na zambarau, inayoashiria uaminifu na uvumbuzi. Utapata nembo katika jukwaa lote: ukurasa wa mwanzo, kichwa, upau wa pembeni na ikoni ya programu. Inapatikana katika muundo wa PNG na SVG kwenye folda ya umma ya programu.",
+  },
+  contact: {
+    fr: "Vous pouvez contacter l'équipe OmniCore par email à contact@omnicore.site ou par téléphone au +243 XX XXX XXXX. Notre siège est situé à Kalemie, province du Tanganyika, République Démocratique du Congo. Nous sommes disponibles du lundi au vendredi de 8h à 17h. Vous pouvez également utiliser le formulaire de contact sur notre site pour toute demande d'assistance, d'information commerciale ou de partenariat.",
+    en: "You can contact the OmniCore team by email at contact@omnicore.site or by phone at +243 XX XXX XXXX. Our headquarters is located in Kalemie, Tanganyika Province, Democratic Republic of Congo. We are available Monday to Friday from 8 AM to 5 PM. You can also use the contact form on our site for support, sales inquiries, or partnership requests.",
+    sw: "Unaweza kuwasiliana na timu ya OmniCore kwa barua pepe contact@omnicore.site au kwa simu +243 XX XXX XXXX. Makao yetu makuu yapo Kalemie, Mkoa wa Tanganyika, Jamhuri ya Kidemokrasia ya Kongo. Tunapatikana Jumatatu hadi Ijumaa kutoka 8:00 hadi 17:00. Unaweza pia kutumia fomu ya mawasiliano kwenye tovuti yetu kwa usaidizi, maswali ya biashara au maombi ya ushirikiano.",
+  },
   help: {
-    fr: "Je suis là pour vous aider avec toutes les fonctionnalités d'OmniCore. Posez-moi des questions sur : le tableau de bord, RH, Finance, Commerce, Pharmacie, Santé, Éducation, Projets, CRM, ou les paramètres.",
-    en: "I'm here to help you with all OmniCore features. Ask me about: Dashboard, HR, Finance, Commerce, Pharmacy, Healthcare, Education, Projects, CRM, or Settings.",
-    sw: "Niko hapa kukusaidia na vipengele vyote vya OmniCore. Niulize kuhusu: Dashibodi, HR, Fedha, Biashara, Famasia, Afya, Elimu, Miradi, CRM, au Mipangilio.",
+    fr: "Je suis là pour vous aider avec toutes les fonctionnalités d'OmniCore. Posez-moi des questions sur : le tableau de bord, RH, Finance, Commerce, Pharmacie, Santé, Éducation, Projets, CRM, paramètres, confidentialité, cookies, l'entreprise, le logo, ou les contacts.",
+    en: "I'm here to help you with all OmniCore features. Ask me about: Dashboard, HR, Finance, Commerce, Pharmacy, Healthcare, Education, Projects, CRM, Settings, Privacy, Cookies, About the company, the Logo, or Contact information.",
+    sw: "Niko hapa kukusaidia na vipengele vyote vya OmniCore. Niulize kuhusu: Dashibodi, HR, Fedha, Biashara, Famasia, Afya, Elimu, Miradi, CRM, Mipangilio, Faragha, Vidakuzi, Kampuni, Nembo, au Mawasiliano.",
   },
   greeting: {
-    fr: "Bonjour ! Je suis OmniCore AI, votre assistant intelligent. Comment puis-je vous aider aujourd'hui ? Vous pouvez me poser des questions sur tous les modules de la plateforme.",
-    en: "Hello! I am OmniCore AI, your intelligent assistant. How can I help you today? You can ask me questions about all platform modules.",
-    sw: "Habari! Mimi ni OmniCore AI, msaidizi wako mahiri. Ninaweza kukusaidiaje leo? Unaweza kuniuliza maswali kuhusu moduli zote za jukwaa.",
+    fr: "👋 Bonjour ! Je suis OmniCore AI, votre assistant intelligent. Je peux vous aider avec tous les modules de la plateforme : RH, Finance, Commerce, Pharmacie, Santé, Éducation, Projets, CRM. Vous pouvez aussi me poser des questions sur la confidentialité, l'entreprise, le logo ou les coordonnées. Comment puis-je vous aider aujourd'hui ?",
+    en: "👋 Hello! I am OmniCore AI, your intelligent assistant. I can help you with all platform modules: HR, Finance, Commerce, Pharmacy, Healthcare, Education, Projects, CRM. You can also ask me about privacy, the company, the logo, or contact info. How can I help you today?",
+    sw: "👋 Habari! Mimi ni OmniCore AI, msaidizi wako mahiri. Ninaweza kukusaidia na moduli zote za jukwaa: HR, Fedha, Biashara, Famasia, Afya, Elimu, Miradi, CRM. Unaweza pia kuniuliza kuhusu faragha, kampuni, nembo au mawasiliano. Ninaweza kukusaidiaje leo?",
   },
   default: {
-    fr: "Merci pour votre question. Je suis votre assistant OmniCore AI. Pour vous aider au mieux, précisez si votre question concerne : le tableau de bord, les RH, la finance, le commerce, la pharmacie, la santé, l'éducation, les projets, le CRM ou les paramètres.",
-    en: "Thank you for your question. I am your OmniCore AI assistant. To help you best, please specify if your question is about: Dashboard, HR, Finance, Commerce, Pharmacy, Healthcare, Education, Projects, CRM, or Settings.",
-    sw: "Asante kwa swali lako. Mimi ni msaidizi wako wa OmniCore AI. Kukusaidia vyema, tafadhali eleza kama swali lako linahusu: Dashibodi, HR, Fedha, Biashara, Famasia, Afya, Elimu, Miradi, CRM, au Mipangilio.",
+    fr: "Merci pour votre question. Je suis OmniCore AI, votre assistant intelligent. Pour vous aider au mieux, précisez si votre question concerne : le tableau de bord, les RH, la finance, le commerce, la pharmacie, la santé, l'éducation, les projets, le CRM, les paramètres, la confidentialité, les cookies, l'entreprise, le logo, ou les contacts.",
+    en: "Thank you for your question. I am OmniCore AI, your intelligent assistant. To help you best, please specify if your question is about: Dashboard, HR, Finance, Commerce, Pharmacy, Healthcare, Education, Projects, CRM, Settings, Privacy, Cookies, the Company, the Logo, or Contact information.",
+    sw: "Asante kwa swali lako. Mimi ni OmniCore AI, msaidizi wako mahiri. Kukusaidia vyema, tafadhali eleza kama swali lako linahusu: Dashibodi, HR, Fedha, Biashara, Famasia, Afya, Elimu, Miradi, CRM, Mipangilio, Faragha, Vidakuzi, Kampuni, Nembo, au Mawasiliano.",
   },
 };
 
-function getResponse(message: string, lang: "fr" | "en" | "sw"): string {
+function getResponse(message: string, lang: "fr" | "en" | "sw", previousMessages: string[]): string {
   const lower = message.toLowerCase();
 
+  const prevContext = previousMessages.join(" ").toLowerCase();
+
   if (
-    /\b(bonjour|salut|coucou|hello|hi|hey|habari|jambo|hujambo)\b/.test(lower)
+    /\b(bonjour|salut|coucou|hello|hi|hey|habari|jambo|hujambo|salam|salamu)\b/.test(lower)
   ) {
     return responses.greeting[lang];
   }
 
   if (
-    /\b(help|aide|msaada|assist|comment|how|jinsi|soutenir|aider|kusaidia)\b/.test(
-      lower
-    )
+    /\b(merci|asante|thank|thanks|merci beaucoup|merci bien|shukran)\b/.test(lower)
+  ) {
+    const thankYou: ResponseMap = {
+      fr: "De rien ! Je suis là pour vous aider. N'hésitez pas si vous avez d'autres questions.",
+      en: "You're welcome! I'm here to help. Feel free to ask if you have more questions.",
+      sw: "Karibu! Niko hapa kukusaidia. Usisite kuuliza ikiwa una maswali zaidi.",
+    };
+    return thankYou[lang];
+  }
+
+  if (
+    /\b(au revoir|bye|goodbye|kwa heri|à plus|tchao|see you|baadaye)\b/.test(lower)
+  ) {
+    const goodbye: ResponseMap = {
+      fr: "Au revoir ! N'hésitez pas à revenir si vous avez besoin d'aide. Bonne journée !",
+      en: "Goodbye! Feel free to come back if you need help. Have a great day!",
+      sw: "Kwa heri! Usisite kuruka ikiwa unahitaji msaada. Siku njema!",
+    };
+    return goodbye[lang];
+  }
+
+  if (
+    /\b(help|aide|msaada|assist|comment|how|jinsi|soutenir|aider|kusaidia|peux-tu|can you|unaweza)\b/.test(lower)
   ) {
     return responses.help[lang];
   }
 
+  // Privacy & Cookies
   if (
-    /\b(dashboard|tableau de bord|dashibodi|graphique|chiffre|kpi|indicateur|metric|performance)\b/.test(
-      lower
-    )
+    /\b(confidentialité|privacy|données personnelles|personal data|data protection|protection des données|rgpd|gdpr|faragha|data|donnée)\b/.test(lower)
+  ) {
+    return responses.privacy[lang];
+  }
+
+  if (
+    /\b(cookie|cookies|vidakuzi|témoin|traceur)\b/.test(lower)
+  ) {
+    return responses.cookies[lang];
+  }
+
+  // About company
+  if (
+    /\b(à propos|about|company|entreprise|société|kampuni|qui sommes.nous|who are you|nani|wewe ni nani)\b/.test(lower)
+  ) {
+    return responses.about[lang];
+  }
+
+  // Logo & branding
+  if (
+    /\b(logo|nembo|brand|marque|emblème|symbole|icône|icon)\b/.test(lower)
+  ) {
+    return responses.logo[lang];
+  }
+
+  // Contact
+  if (
+    /\b(contact|contacter|join|reach|wasiliana|coordonnées|adresse|address|téléphone|phone|simu|email|courrier)\b/.test(lower)
+  ) {
+    return responses.contact[lang];
+  }
+
+  if (
+    /\b(dashboard|tableau de bord|dashibodi|graphique|chiffre|kpi|indicateur|metric|performance|aperçu|overview)\b/.test(lower)
   ) {
     return responses.dashboard[lang];
   }
 
   // HR
   if (
-    /\b(rh|hr|ressources humaines|employé|employee|mfanyakazi|wafanyakazi|embauche|recrutement)\b/.test(
-      lower
-    )
+    /\b(rh|hr|ressources humaines|employé|employee|mfanyakazi|wafanyakazi|embauche|recrutement|hire|personnel)\b/.test(lower)
   ) {
     if (
-      /\b(paie|payroll|salaire|salary|mshahara|mishahara|bulletin|fiche de paie)\b/.test(
-        lower
-      )
+      /\b(paie|payroll|salaire|salary|mshahara|mishahara|bulletin|fiche de paie|salaire)\b/.test(lower)
     ) {
       return responses.hr_payroll[lang];
     }
     if (
-      /\b(présence|pointage|attendance|absence|congé|leave|mahudhurio|likizo|check.in)\b/.test(
-        lower
-      )
+      /\b(présence|pointage|attendance|absence|congé|leave|mahudhurio|likizo|check.in|time)\b/.test(lower)
     ) {
       return responses.hr_attendance[lang];
     }
@@ -247,36 +357,38 @@ function getResponse(message: string, lang: "fr" | "en" | "sw"): string {
 
   // Finance
   if (
-    /\b(finance|financier|comptabilité|accounting|fedha|financial|billing|facturation)\b/.test(
-      lower
-    )
+    /\b(finance|financier|comptabilité|accounting|fedha|financial|billing|facturation|compta|compte)\b/.test(lower)
   ) {
     if (
-      /\b(facture|invoice|ankara|ankara|bill)\b/.test(lower)
+      /\b(facture|invoice|ankara|bill|facturation)\b/.test(lower)
     ) {
       return responses.finance_invoice[lang];
     }
     if (
-      /\b(dépense|expense|gharama|cost|dépense)\b/.test(lower)
+      /\b(dépense|expense|gharama|cost|dépense|frais)\b/.test(lower)
     ) {
       return responses.finance_expense[lang];
     }
     if (
-      /\b(revenu|revenue|income|mapato|chiffre d.affaires)\b/.test(lower)
+      /\b(revenu|revenue|income|mapato|chiffre d.affaires|profit|bénéfice)\b/.test(lower)
     ) {
       return responses.finance_revenue[lang];
+    }
+    if (prevContext.includes("facture") || prevContext.includes("invoice") || prevContext.includes("ankara")) {
+      return responses.finance_invoice[lang];
+    }
+    if (prevContext.includes("dépense") || prevContext.includes("expense") || prevContext.includes("gharama")) {
+      return responses.finance_expense[lang];
     }
     return responses.finance_invoice[lang];
   }
 
   // Commerce
   if (
-    /\b(commerce|boutique|shop|magasin|biashara|ecommerce|e.commerce|vente|sale)\b/.test(
-      lower
-    )
+    /\b(commerce|boutique|shop|magasin|biashara|ecommerce|e.commerce|vente|sale|selling|retail|détail)\b/.test(lower)
   ) {
     if (
-      /\b(produit|product|bidhaa|article|item)\b/.test(lower)
+      /\b(produit|product|bidhaa|article|item|marchandise)\b/.test(lower)
     ) {
       return responses.commerce_product[lang];
     }
@@ -285,90 +397,97 @@ function getResponse(message: string, lang: "fr" | "en" | "sw"): string {
     ) {
       return responses.commerce_order[lang];
     }
+    if (prevContext.includes("produit") || prevContext.includes("product") || prevContext.includes("bidhaa")) {
+      return responses.commerce_product[lang];
+    }
     return responses.commerce_product[lang];
   }
 
   // Pharmacy
   if (
-    /\b(pharmacie|pharmacy|famasia|médicament|medicine|dawa|pharma|drug)\b/.test(
-      lower
-    )
+    /\b(pharmacie|pharmacy|famasia|médicament|medicine|dawa|pharma|drug|médicaux)\b/.test(lower)
   ) {
     if (
-      /\b(stock|inventaire|inventory|hisa|orodha)\b/.test(lower)
+      /\b(stock|inventaire|inventory|hisa|orodha|approvisionnement)\b/.test(lower)
     ) {
       return responses.pharmacy_stock[lang];
     }
     if (
-      /\b(ordonnance|prescription|agizo|prescription médicale)\b/.test(lower)
+      /\b(ordonnance|prescription|agizo|prescription médicale|doctor.order)\b/.test(lower)
     ) {
       return responses.pharmacy_prescription[lang];
+    }
+    if (prevContext.includes("stock") || prevContext.includes("inventaire") || prevContext.includes("hisa")) {
+      return responses.pharmacy_stock[lang];
     }
     return responses.pharmacy_medicine[lang];
   }
 
   // Healthcare
   if (
-    /\b(santé|healthcare|afya|médical|medical|hôpital|hospital|clinique|clinic)\b/.test(
-      lower
-    )
+    /\b(santé|healthcare|afya|médical|medical|hôpital|hospital|clinique|clinic|soins|care|matibabu)\b/.test(lower)
   ) {
     if (
-      /\b(patient|mgonjwa|wagonywa|dossier)\b/.test(lower)
+      /\b(patient|mgonjwa|wagonjwa|dossier|record|history)\b/.test(lower)
     ) {
       return responses.healthcare_patient[lang];
     }
     if (
-      /\b(rendez.vous|appointment|miadi|rdv|booking)\b/.test(lower)
+      /\b(rendez.vous|appointment|miadi|rdv|booking|schedule)\b/.test(lower)
     ) {
       return responses.healthcare_appointment[lang];
     }
     if (
-      /\b(personnel|staff|wafanyakazi|médecin|doctor|nurse|infirmier)\b/.test(
-        lower
-      )
+      /\b(personnel|staff|wafanyakazi|médecin|doctor|nurse|infirmier|daktari|muuguzi)\b/.test(lower)
     ) {
       return responses.healthcare_staff[lang];
+    }
+    if (prevContext.includes("patient") || prevContext.includes("mgonjwa")) {
+      return responses.healthcare_patient[lang];
     }
     return responses.healthcare_patient[lang];
   }
 
   // Education
   if (
-    /\b(éducation|education|school|élimu|école|académique|academic|formation|training)\b/.test(
-      lower
-    )
+    /\b(éducation|education|school|elimu|école|académique|academic|formation|training|learning|apprentissage|masomo)\b/.test(lower)
   ) {
     if (
-      /\b(étudiant|student|élève|mwanafunzi|wanafunzi)\b/.test(lower)
+      /\b(étudiant|student|élève|mwanafunzi|wanafunzi|apprenant)\b/.test(lower)
     ) {
       return responses.education_student[lang];
     }
     if (
-      /\b(cours|course|kozi|matière|subject)\b/.test(lower)
+      /\b(cours|course|kozi|matière|subject|module)\b/.test(lower)
     ) {
       return responses.education_course[lang];
     }
     if (
-      /\b(classe|class|darasa|niveau|level|section)\b/.test(lower)
+      /\b(classe|class|darasa|niveau|level|section|grade)\b/.test(lower)
     ) {
       return responses.education_class[lang];
+    }
+    if (prevContext.includes("étudiant") || prevContext.includes("student") || prevContext.includes("mwanafunzi")) {
+      return responses.education_student[lang];
     }
     return responses.education_student[lang];
   }
 
   // Projects
   if (
-    /\b(projet|project|mradi|miradi|tâche|task|kazi)\b/.test(lower)
+    /\b(projet|project|mradi|miradi|tâche|task|kazi|assignment|chantier|jalon|milestone)\b/.test(lower)
   ) {
     if (
-      /\b(projet|project|mradi|miradi|chantier)\b/.test(lower)
+      /\b(projet|project|mradi|miradi|chantier|programme)\b/.test(lower)
     ) {
       return responses.project[lang];
     }
     if (
-      /\b(tâche|task|kazi|assignment)\b/.test(lower)
+      /\b(tâche|task|kazi|assignment|todo)\b/.test(lower)
     ) {
+      return responses.task[lang];
+    }
+    if (prevContext.includes("tâche") || prevContext.includes("task") || prevContext.includes("kazi")) {
       return responses.task[lang];
     }
     return responses.project[lang];
@@ -376,54 +495,49 @@ function getResponse(message: string, lang: "fr" | "en" | "sw"): string {
 
   // Calendar
   if (
-    /\b(calendrier|calendar|kalenda|agenda|planning|schedule|échéance|deadline)\b/.test(
-      lower
-    )
+    /\b(calendrier|calendar|kalenda|agenda|planning|schedule|échéance|deadline|event|événement|tukio)\b/.test(lower)
   ) {
     return responses.calendar[lang];
   }
 
   // CRM
   if (
-    /\b(crm|client|customer|mteja|wateja|relation client|commercial|vente|sales)\b/.test(
-      lower
-    )
+    /\b(crm|client|customer|mteja|wateja|relation client|commercial|vente|sales|marketing)\b/.test(lower)
   ) {
     if (
-      /\b(lead|prospect|watarajiwa|opportunité)\b/.test(lower)
+      /\b(lead|prospect|watarajiwa|opportunité|potential)\b/.test(lower)
     ) {
       return responses.crm_lead[lang];
     }
     if (
-      /\b(contact|mawasiliano|annuaire)\b/.test(lower)
+      /\b(contact|mawasiliano|annuaire|repertoire)\b/.test(lower)
     ) {
       return responses.crm_contact[lang];
     }
     if (
-      /\b(deal|affaire|opportunity|fursa|mkataba|mikataba)\b/.test(lower)
+      /\b(deal|affaire|opportunity|fursa|mkataba|mikataba|négociation)\b/.test(lower)
     ) {
       return responses.crm_deal[lang];
+    }
+    if (prevContext.includes("lead") || prevContext.includes("prospect")) {
+      return responses.crm_lead[lang];
     }
     return responses.crm_lead[lang];
   }
 
   // Settings / Profile / Workspace
   if (
-    /\b(paramètre|setting|mipangilio|config|préférence|preference)\b/.test(
-      lower
-    )
+    /\b(paramètre|setting|mipangilio|config|préférence|preference|réglage)\b/.test(lower)
   ) {
     return responses.settings[lang];
   }
   if (
-    /\b(profil|profile|wasifu|compte|account|avatar)\b/.test(lower)
+    /\b(profil|profile|wasifu|compte|account|avatar|mon compte)\b/.test(lower)
   ) {
     return responses.profile[lang];
   }
   if (
-    /\b(workspace|espace|nafasi|organisation|organization|organization)\b/.test(
-      lower
-    )
+    /\b(workspace|espace|nafasi|organisation|organization|organization|administration)\b/.test(lower)
   ) {
     return responses.workspace[lang];
   }
@@ -438,6 +552,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
+    const ip = getClientIdentifier(req);
+    const burstCheck = checkBurst(ip);
+    if (!burstCheck.allowed) {
+      return NextResponse.json(
+        { error: `Trop de requêtes. Réessayez dans ${burstCheck.retryAfter} secondes.` },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(burstCheck.retryAfter),
+            "X-RateLimit-Limit": String(BURST_LIMIT),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+
+    const rateCheck = await checkRateLimit("chat", `user:${user.id}`);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: `Limite de messages atteinte. Réessayez dans ${rateCheck.retryAfter} secondes.` },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateCheck.retryAfter),
+            "X-RateLimit-Limit": "5",
+            "X-RateLimit-Remaining": String(rateCheck.remaining),
+          },
+        }
+      );
+    }
+
     const { messages } = await req.json();
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -446,13 +591,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const lastUserMessage = [...messages]
-      .reverse()
-      .find((m: { role: string }) => m.role === "user");
+    const allUserMessages = messages
+      .filter((m: { role: string }) => m.role === "user")
+      .slice(-3)
+      .map((m: { content: string }) => m.content);
 
-    const content = lastUserMessage?.content || "";
-    const lang = detectLanguage(content);
-    const response = getResponse(content, lang);
+    const lastUserMessage = allUserMessages[allUserMessages.length - 1] || "";
+    const previousMessages = allUserMessages.slice(0, -1);
+
+    const lang = detectLanguage(lastUserMessage);
+    const response = getResponse(lastUserMessage, lang, previousMessages);
 
     return NextResponse.json({
       role: "assistant",
