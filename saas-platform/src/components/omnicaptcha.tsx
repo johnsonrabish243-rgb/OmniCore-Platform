@@ -15,6 +15,8 @@ interface Props {
   className?: string; invisible?: boolean; id?: string;
 }
 
+const STORAGE_KEY = "omnicaptcha:verified";
+
 export function OmniCaptcha({ onVerify, className, invisible, id }: Props) {
   const t = useTranslations("omniCaptcha");
   const locale = useLocale();
@@ -23,6 +25,7 @@ export function OmniCaptcha({ onVerify, className, invisible, id }: Props) {
   const [error, setError] = useState("");
   const verifiedRef = useRef(false);
   const keyRef = useRef(0);
+  const restored = useRef(false);
 
   const gen = useCallback(async () => {
     setStatus("loading"); setError(""); verifiedRef.current = false;
@@ -40,7 +43,14 @@ export function OmniCaptcha({ onVerify, className, invisible, id }: Props) {
     } catch { setError(t("loadError")); setStatus("invalid"); }
   }, [t, locale, invisible, onVerify]);
 
-  useEffect(() => { gen(); }, [gen]);
+  useEffect(() => {
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(STORAGE_KEY)) {
+      setStatus("valid"); verifiedRef.current = true; restored.current = true;
+      onVerify(true);
+      return;
+    }
+    gen();
+  }, [gen, onVerify]);
 
   const submit = async (answer: string) => {
     if (!captcha || verifiedRef.current) return;
@@ -51,8 +61,11 @@ export function OmniCaptcha({ onVerify, className, invisible, id }: Props) {
         body: JSON.stringify({ token: captcha.token, answer }),
       });
       const r = await res.json();
-      if (r.valid) { setStatus("valid"); verifiedRef.current = true; onVerify(true, captcha.token); }
-      else { setStatus("invalid"); setError(t("incorrect")); onVerify(false); setTimeout(() => gen(), 1500); }
+      if (r.valid) {
+        setStatus("valid"); verifiedRef.current = true;
+        try { sessionStorage.setItem(STORAGE_KEY, "1"); } catch {}
+        onVerify(true, captcha.token);
+      } else { setStatus("invalid"); setError(t("incorrect")); onVerify(false); setTimeout(() => gen(), 1500); }
     } catch { setStatus("invalid"); setError(t("verifyError")); onVerify(false); }
   };
 
