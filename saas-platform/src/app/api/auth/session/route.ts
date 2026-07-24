@@ -70,7 +70,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Session fetch error:", error);
+    console.error("Session fetch error");
     return NextResponse.json({ user: null }, { status: 401 });
   }
 }

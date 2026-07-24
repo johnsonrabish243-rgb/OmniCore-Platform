@@ -107,7 +107,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error("Admin stats error:", error);
+    console.error("Admin stats error");
     return NextResponse.json({ error: "Erreur lors du chargement des statistiques" }, { status: 500 });
   }
 }

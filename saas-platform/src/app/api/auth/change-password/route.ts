@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { validateCSRFRequest } from "@/lib/csrf";
 
 export async function POST(request: Request) {
   try {
+    if (!validateCSRFRequest(request)) {
+      return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
+    }
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 

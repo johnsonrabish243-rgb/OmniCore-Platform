@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Captcha verify error:", error);
+    console.error("Captcha verify error");
     return NextResponse.json(
       { valid: false, error: "Erreur lors de la vérification." },
       { status: 500 }

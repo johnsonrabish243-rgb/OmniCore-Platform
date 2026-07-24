@@ -105,7 +105,7 @@ export async function POST(request: Request) {
 
       if (insertError) {
         // Table might not exist - log but don't fail
-        console.warn("Could not insert contact_request (table may not exist):", insertError.message);
+        console.warn("Could not insert contact_request (table may not exist)");
       }
     } catch (e) {
       console.warn("contact_requests table not found, skipping DB insert");

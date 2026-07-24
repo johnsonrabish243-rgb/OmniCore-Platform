@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       token: challenge.token,
     });
   } catch (error) {
-    console.error("Captcha generate error:", error);
+    console.error("Captcha generate error");
     return NextResponse.json(
       { error: "Erreur lors de la génération du captcha." },
       { status: 500 }

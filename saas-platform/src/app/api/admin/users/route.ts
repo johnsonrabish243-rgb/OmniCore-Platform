@@ -1,27 +1,38 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { createClient } from "@/lib/supabase/server";
+import { validateCSRFRequest } from "@/lib/csrf";
 
 export async function GET() {
-  const user = await getCurrentUser();
-  if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  try {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    }
+
+    const supabase = await createClient();
+    const { data: users } = await supabase
+      .from("users")
+      .select("id, email, first_name, last_name, role, is_active, created_at, avatar_url")
+      .order("created_at", { ascending: false });
+
+    return NextResponse.json({ users: users || [] });
+  } catch (error) {
+    console.error("Failed to fetch users");
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
-
-  const supabase = await createClient();
-  const { data: users } = await supabase
-    .from("users")
-    .select("id, email, first_name, last_name, role, is_active, created_at, avatar_url")
-    .order("created_at", { ascending: false });
-
-  return NextResponse.json({ users: users || [] });
 }
 
 export async function POST(request: Request) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-  }
+  try {
+    if (!validateCSRFRequest(request)) {
+      return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
+    }
+
+    const user = await getCurrentUser();
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    }
 
   const body = await request.json();
   const { email, password, firstName, lastName, role } = body;
@@ -84,4 +95,8 @@ export async function POST(request: Request) {
       role: role || "EMPLOYEE",
     },
   });
+  } catch (error) {
+    console.error("Failed to create user");
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
 }

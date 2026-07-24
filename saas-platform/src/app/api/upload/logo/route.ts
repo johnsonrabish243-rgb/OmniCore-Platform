@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { validateCSRFRequest } from "@/lib/csrf";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -16,6 +17,10 @@ function getExtension(contentType: string): string | null {
 
 export async function POST(request: Request) {
   try {
+    if (!validateCSRFRequest(request)) {
+      return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
+    }
+
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });

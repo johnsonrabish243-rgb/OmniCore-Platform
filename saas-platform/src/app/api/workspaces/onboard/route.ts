@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getCurrentUser } from "@/lib/auth-helpers";
+import { validateCSRFRequest } from "@/lib/csrf";
 
 function slugify(value: string) {
   return value
@@ -11,6 +12,10 @@ function slugify(value: string) {
 
 export async function POST(request: Request) {
   try {
+    if (!validateCSRFRequest(request)) {
+      return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
+    }
+
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
@@ -138,7 +143,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ organization, workspace }, { status: 201 });
   } catch (error) {
-    console.error("Workspace onboarding error:", error);
+    console.error("Workspace onboarding error");
     return NextResponse.json(
       { error: "Une erreur est survenue lors de la création de l'espace de travail." },
       { status: 500 }

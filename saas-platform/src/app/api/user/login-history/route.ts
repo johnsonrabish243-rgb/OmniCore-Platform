@@ -18,7 +18,7 @@ export async function GET() {
 
     return NextResponse.json({ history: history || [] });
   } catch (error) {
-    console.error("Login history fetch error:", error);
+    console.error("Login history fetch error");
     return NextResponse.json({ error: "Erreur" }, { status: 500 });
   }
 }
