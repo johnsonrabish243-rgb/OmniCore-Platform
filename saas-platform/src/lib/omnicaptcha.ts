@@ -14,9 +14,6 @@
 import { createHmac, randomInt, timingSafeEqual } from "crypto";
 
 const SECRET: string = process.env.OMNICAPTCHA_SECRET || process.env.INSFORGE_API_KEY || "";
-if (!SECRET) {
-  throw new Error("OMNICAPTCHA_SECRET or INSFORGE_API_KEY must be set in environment variables");
-}
 const TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /* ─── Challenge Types ─── */

@@ -17,7 +17,7 @@ export async function GET() {
 
     return NextResponse.json({ devices: devices || [] });
   } catch (error) {
-    console.error("Devices fetch error:", error);
+    console.error("Devices fetch error");
     return NextResponse.json({ devices: [] });
   }
 }

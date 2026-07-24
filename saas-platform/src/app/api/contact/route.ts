@@ -147,7 +147,7 @@ export async function POST(request: Request) {
         console.log("===============================");
       }
     } catch (emailError) {
-      console.error("Failed to send notification email:", emailError);
+      console.error("Failed to send notification email");
       // Don't fail the request if email fails
     }
 
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
       message: "Votre demande a été envoyée avec succès. Nous vous contacterons bientôt.",
     });
   } catch (error) {
-    console.error("Contact form error:", error);
+    console.error("Contact form error");
     return NextResponse.json(
       { error: "Une erreur est survenue lors du traitement de votre demande." },
       { status: 500 }

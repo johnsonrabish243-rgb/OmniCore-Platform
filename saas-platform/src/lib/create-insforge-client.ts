@@ -10,9 +10,9 @@
 
 import { createClient as createInsforgeClient, createAdminClient } from "@insforge/sdk";
 
-const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL!;
-const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY!;
-const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY!;
+const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL || "";
+const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY || "";
+const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY || "";
 
 /**
  * Wraps an InsForge auth object with a Proxy that maps Supabase method names to InsForge equivalents.

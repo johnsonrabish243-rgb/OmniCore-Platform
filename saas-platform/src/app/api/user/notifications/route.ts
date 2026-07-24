@@ -27,7 +27,7 @@ export async function GET() {
       unreadCount: unreadCount || 0,
     });
   } catch (error) {
-    console.error("Notifications fetch error:", error);
+    console.error("Notifications fetch error");
     return NextResponse.json({ notifications: [], unreadCount: 0 });
   }
 }
@@ -58,7 +58,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Notifications update error:", error);
+    console.error("Notifications update error");
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

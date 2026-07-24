@@ -25,13 +25,13 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error("Change password error:", error.message);
+      console.error("Change password error");
       return NextResponse.json({ error: "Erreur lors du changement de mot de passe" }, { status: 400 });
     }
 
     return NextResponse.json({ message: "Mot de passe modifié avec succès" });
   } catch (error) {
-    console.error("Change password error:", error);
+    console.error("Change password error");
     return NextResponse.json({ error: "Erreur lors du changement de mot de passe" }, { status: 500 });
   }
 }

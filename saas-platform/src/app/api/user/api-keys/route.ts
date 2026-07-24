@@ -28,7 +28,7 @@ export async function GET() {
 
     return NextResponse.json({ apiKeys: masked });
   } catch (error) {
-    console.error("API keys fetch error:", error);
+    console.error("API keys fetch error");
     return NextResponse.json({ error: "Erreur" }, { status: 500 });
   }
 }
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ apiKey });
   } catch (error) {
-    console.error("API keys POST error:", error);
+    console.error("API keys POST error");
     return NextResponse.json({ error: "Erreur" }, { status: 500 });
   }
 }
@@ -86,7 +86,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("API keys DELETE error:", error);
+    console.error("API keys DELETE error");
     return NextResponse.json({ error: "Erreur" }, { status: 500 });
   }
 }

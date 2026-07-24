@@ -2,7 +2,8 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";import {
+import { Button } from "@/components/ui/button";
+import {
   ArrowUpRight, TrendingUp, DollarSign, ShoppingCart, Plus, Download
 } from "lucide-react";
 import { cn } from "@/lib/utils";

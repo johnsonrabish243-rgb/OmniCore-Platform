@@ -46,7 +46,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Profile fetch error:", error);
+    console.error("Profile fetch error");
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

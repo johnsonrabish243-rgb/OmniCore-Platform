@@ -3,8 +3,7 @@
  * Use this for all API calls that modify data (POST, PUT, DELETE, PATCH).
  */
 
-const CSRF_HEADER_NAME = "x-requested-with";
-const CSRF_HEADER_VALUE = "xmlhttprequest";
+import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "./csrf";
 
 interface SecureFetchOptions extends RequestInit {
   method?: string;

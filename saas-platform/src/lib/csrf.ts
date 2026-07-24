@@ -3,12 +3,12 @@
  * Uses the custom header pattern: browsers won't send custom headers in cross-origin requests.
  */
 
-const CSRF_HEADER_NAME = "x-requested-with";
-const CSRF_HEADER_VALUE = "xmlhttprequest";
+export const CSRF_HEADER_NAME = "x-requested-with";
+export const CSRF_HEADER_VALUE = "XMLHttpRequest";
 
 export function validateCSRFRequest(request: Request): boolean {
   const headerValue = request.headers.get(CSRF_HEADER_NAME);
-  return headerValue === CSRF_HEADER_VALUE;
+  return headerValue?.toLowerCase() === CSRF_HEADER_VALUE.toLowerCase();
 }
 
 export function getCSRFHeaders(): Record<string, string> {

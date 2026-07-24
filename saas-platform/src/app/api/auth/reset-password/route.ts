@@ -22,13 +22,13 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error("Reset password error:", error.message);
+      console.error("Reset password error");
       return NextResponse.json({ error: "Token invalide ou expiré. Veuillez refaire une demande de réinitialisation." }, { status: 400 });
     }
 
     return NextResponse.json({ message: "Mot de passe réinitialisé avec succès" });
   } catch (error) {
-    console.error("Reset password error:", error);
+    console.error("Reset password error");
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }
 }

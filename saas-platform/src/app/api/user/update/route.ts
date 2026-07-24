@@ -92,7 +92,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('Update user error:', err);
+    console.error("Update user error");
     return NextResponse.json({ error: "Erreur lors de la mise à jour" }, { status: 500 });
   }
 }
