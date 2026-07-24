@@ -1,4 +1,4 @@
-import { getMessages, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { NextIntlClientProvider } from "next-intl";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
@@ -7,6 +7,7 @@ import { InitialLoading } from "@/components/initial-loading";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { headers } from "next/headers";
+import { loadMessages } from "@/lib/messages-loader";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -112,7 +113,7 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  const messages = await getMessages();
+  const messages = await loadMessages(locale);
 
   // Determine if this is an auth page (login, signup, etc.) or the landing page
   // These should NOT show the sidebar/AppShell
