@@ -4,8 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
 import { validateCSRFRequest } from "@/lib/csrf";
 
-const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL!;
-const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY!;
+const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL || "";
+const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY || "";
 
 /**
  * Signup route that:

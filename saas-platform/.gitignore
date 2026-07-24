@@ -32,6 +32,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# insforge (contains API keys - always gitignore)
+.insforge
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

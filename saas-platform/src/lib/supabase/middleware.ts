@@ -3,9 +3,9 @@ import { createServerClient } from "@insforge/sdk/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { wrapAuth } from "@/lib/create-insforge-client";
 
-const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL!;
-const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY!;
-const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY!;
+const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL || "";
+const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY || "";
+const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY || "";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
