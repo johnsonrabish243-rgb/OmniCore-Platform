@@ -212,15 +212,15 @@ export function GlobalSearch() {
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <kbd className="inline-flex h-4 items-center rounded-[4px] border border-border/50 bg-background px-1 text-[10px] font-medium">↑</kbd>
             <kbd className="inline-flex h-4 items-center rounded-[4px] border border-border/50 bg-background px-1 text-[10px] font-medium">↓</kbd>
-            <span>Navigate</span>
+            <span>{t("navigate")}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <kbd className="inline-flex h-4 items-center rounded-[4px] border border-border/50 bg-background px-1 text-[10px] font-medium">↵</kbd>
-            <span>Open</span>
+            <span>{t("open")}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground ml-auto">
             <kbd className="inline-flex h-4 items-center rounded-[4px] border border-border/50 bg-background px-1 text-[10px] font-medium">ESC</kbd>
-            <span>Close</span>
+            <span>{t("close")}</span>
           </div>
         </div>
       </div>

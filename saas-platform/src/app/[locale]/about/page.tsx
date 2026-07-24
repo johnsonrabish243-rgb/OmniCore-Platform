@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -75,6 +76,7 @@ function localePath(path: string): string {
 function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const tl = useTranslations("landing");
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -83,10 +85,10 @@ function LandingNav() {
   }, []);
 
   const navLinks = [
-    { label: "Fonctionnalités", href: localePath("/features") },
-    { label: "Modules", href: localePath("/#modules") },
-    { label: "À propos", href: localePath("/about") },
-    { label: "Contact", href: localePath("/contact") },
+    { label: tl("navFeatures"), href: localePath("/features") },
+    { label: tl("navModules"), href: localePath("/#modules") },
+    { label: tl("navAbout"), href: localePath("/about") },
+    { label: tl("navContact"), href: localePath("/contact") },
   ];
 
   return (
@@ -117,10 +119,10 @@ function LandingNav() {
 
           <div className="hidden lg:flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild>
-              <a href={localePath("/login")}>Se connecter</a>
+              <a href={localePath("/login")}>{tl("signIn")}</a>
             </Button>
             <Button size="sm" asChild className="gap-1.5 shadow-lg shadow-primary/20">
-              <a href={localePath("/signup")}>Commencer <ArrowRight className="h-3.5 w-3.5" /></a>
+              <a href={localePath("/signup")}>{tl("getStarted")} <ArrowRight className="h-3.5 w-3.5" /></a>
             </Button>
           </div>
 
@@ -138,8 +140,8 @@ function LandingNav() {
             </a>
           ))}
           <div className="pt-3 flex flex-col gap-2">
-            <Button variant="outline" size="sm" asChild className="w-full justify-center"><a href={localePath("/login")}>Se connecter</a></Button>
-            <Button size="sm" asChild className="w-full justify-center gap-1.5"><a href={localePath("/signup")}>Commencer <ArrowRight className="h-3.5 w-3.5" /></a></Button>
+            <Button variant="outline" size="sm" asChild className="w-full justify-center"><a href={localePath("/login")}>{tl("signIn")}</a></Button>
+            <Button size="sm" asChild className="w-full justify-center gap-1.5"><a href={localePath("/signup")}>{tl("getStarted")} <ArrowRight className="h-3.5 w-3.5" /></a></Button>
           </div>
         </div>
       </div>
@@ -149,6 +151,7 @@ function LandingNav() {
 
 /* ───── Hero ───── */
 function AboutHero() {
+  const t = useTranslations("marketing");
   return (
     <section className="relative pt-32 sm:pt-40 pb-16 sm:pb-24 overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -160,30 +163,29 @@ function AboutHero() {
           <ScrollReveal>
             <a href={localePath("/")} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
               <ArrowLeft className="h-4 w-4" />
-              Retour à l&apos;accueil
+              {t("backToHome")}
             </a>
           </ScrollReveal>
           <ScrollReveal delay={100}>
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
               <Building2 className="h-4 w-4" />
-              <span>À propos d&apos;OmniCore</span>
+              <span>{t("aboutBadge")}</span>
             </div>
           </ScrollReveal>
           <ScrollReveal delay={200}>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]">
               <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-                Une entreprise innovante
+                {t("aboutTitle1")}
               </span>
               <br />
               <span className="bg-gradient-to-r from-primary via-blue-500 to-purple-500 bg-clip-text text-transparent">
-                au cœur de l&apos;Afrique
+                {t("aboutTitle2")}
               </span>
             </h1>
           </ScrollReveal>
           <ScrollReveal delay={300}>
             <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              Basée à Kalemie, dans la province du Tanganyika en République Démocratique du Congo,
-              OmniCore développe des solutions logicielles modernes pour la gestion d&apos;entreprise.
+              {t("aboutDescription")}
             </p>
           </ScrollReveal>
         </div>
@@ -194,6 +196,7 @@ function AboutHero() {
 
 /* ───── Mission & Vision ───── */
 function MissionVision() {
+  const t = useTranslations("marketing");
   return (
     <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-muted/30">
       <div className="mx-auto max-w-7xl">
@@ -205,14 +208,12 @@ function MissionVision() {
                 <div className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-gradient-to-br from-primary to-blue-600 text-white mb-6 shadow-lg">
                   <Target className="h-7 w-7" />
                 </div>
-                <h2 className="text-2xl font-bold mb-4">Notre Mission</h2>
+                <h2 className="text-2xl font-bold mb-4">{t("missionTitle")}</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Démocratiser l&apos;accès aux outils de gestion performants pour les organisations
-                  de toutes tailles, en proposant une plateforme ERP complète, accessible, sécurisée
-                  et adaptée aux réalités locales et internationales.
+                  {t("missionDescription")}
                 </p>
                 <div className="mt-6 flex flex-wrap gap-2">
-                  {["Accessibilité", "Innovation", "Excellence"].map((tag) => (
+                  {[t("missionTag1"), t("missionTag2"), t("missionTag3")].map((tag) => (
                     <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
                       {tag}
                     </span>
@@ -229,14 +230,12 @@ function MissionVision() {
                 <div className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-gradient-to-br from-purple-500 to-purple-600 text-white mb-6 shadow-lg">
                   <Eye className="h-7 w-7" />
                 </div>
-                <h2 className="text-2xl font-bold mb-4">Notre Vision</h2>
+                <h2 className="text-2xl font-bold mb-4">{t("visionTitle")}</h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Devenir la plateforme ERP de référence en Afrique centrale et au-delà, en offrant
-                  aux entreprises africaines les outils digitaux nécessaires pour rivaliser
-                  à l&apos;échelle mondiale grâce à des solutions intégrées et innovantes.
+                  {t("visionDescription")}
                 </p>
                 <div className="mt-6 flex flex-wrap gap-2">
-                  {["Leadership", " mondial", "Afrique"].map((tag) => (
+                  {[t("visionTag1"), t("visionTag2")].map((tag) => (
                     <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-500 border border-purple-500/20">
                       {tag}
                     </span>
@@ -253,13 +252,14 @@ function MissionVision() {
 
 /* ───── Values ───── */
 function Values() {
+  const t = useTranslations("marketing");
   const values = [
-    { icon: Lightbulb, title: "Innovation", desc: "Nous repoussons constamment les limites de la technologie pour offrir des solutions de pointe.", gradient: "from-amber-500 to-amber-600" },
-    { icon: Handshake, title: "Intégrité", desc: "Nous agissons avec honnêteté et transparence dans toutes nos interactions.", gradient: "from-emerald-500 to-emerald-600" },
-    { icon: Heart, title: "Excellence", desc: "Nous visons l&apos;excellence dans chaque ligne de code et chaque interaction client.", gradient: "from-rose-500 to-rose-600" },
-    { icon: Users, title: "Communauté", desc: "Nous construisons pour et avec la communauté, en respectant les besoins locaux.", gradient: "from-blue-500 to-blue-600" },
-    { icon: Globe, title: "Inclusion", desc: "Notre plateforme est conçue pour être accessible à tous, quelle que soit la taille de l&apos;organisation.", gradient: "from-purple-500 to-purple-600" },
-    { icon: Rocket, title: "Agilité", desc: "Nous itérons rapidement pour répondre aux besoins évolutifs de nos utilisateurs.", gradient: "from-cyan-500 to-cyan-600" },
+    { icon: Lightbulb, title: t("value1Title"), desc: t("value1Desc"), gradient: "from-amber-500 to-amber-600" },
+    { icon: Handshake, title: t("value2Title"), desc: t("value2Desc"), gradient: "from-emerald-500 to-emerald-600" },
+    { icon: Heart, title: t("value3Title"), desc: t("value3Desc"), gradient: "from-rose-500 to-rose-600" },
+    { icon: Users, title: t("value4Title"), desc: t("value4Desc"), gradient: "from-blue-500 to-blue-600" },
+    { icon: Globe, title: t("value5Title"), desc: t("value5Desc"), gradient: "from-purple-500 to-purple-600" },
+    { icon: Rocket, title: t("value6Title"), desc: t("value6Desc"), gradient: "from-cyan-500 to-cyan-600" },
   ];
 
   return (
@@ -269,13 +269,13 @@ function Values() {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
               <Compass className="h-4 w-4" />
-              <span>Nos Valeurs</span>
+              <span>{t("valuesBadge")}</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
-              Ce qui nous guide
+              {t("valuesTitle")}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Des principes fondamentaux qui orientent chacune de nos décisions.
+              {t("valuesDescription")}
             </p>
           </div>
         </ScrollReveal>
@@ -300,6 +300,7 @@ function Values() {
 
 /* ───── Location ───── */
 function Location() {
+  const t = useTranslations("marketing");
   return (
     <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-muted/30">
       <div className="mx-auto max-w-7xl">
@@ -308,19 +309,16 @@ function Location() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
                 <MapPin className="h-4 w-4" />
-                <span>Notre Siège</span>
+                <span>{t("locationBadge")}</span>
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-6">
-                Kalemie, Tanganyika, RDC
+                {t("locationTitle")}
               </h2>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-6">
-                Notre siège est situé dans la ville de Kalemie, au bord du lac Tanganyika,
-                au cœur de la province du Tanganyika en République Démocratique du Congo.
+                {t("locationDescription1")}
               </p>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-8">
-                C&apos;est depuis cette ville dynamique que nous concevons et développons des solutions
-                technologiques qui transcendent les frontières et servent des organisations
-                à travers l&apos;Afrique et au-delà.
+                {t("locationDescription2")}
               </p>
 
               <div className="space-y-4">
@@ -329,7 +327,7 @@ function Location() {
                     <MapPin className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Adresse</p>
+                    <p className="font-medium text-sm">{t("addressLabel")}</p>
                     <p className="text-xs text-muted-foreground">Kalemie, Tanganyika, RDC</p>
                   </div>
                 </div>
@@ -338,7 +336,7 @@ function Location() {
                     <Mail className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Email</p>
+                    <p className="font-medium text-sm">{t("emailLabel")}</p>
                     <p className="text-xs text-muted-foreground">contact@omnicore.site</p>
                   </div>
                 </div>
@@ -347,7 +345,7 @@ function Location() {
                     <Phone className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Téléphone</p>
+                    <p className="font-medium text-sm">{t("phoneLabel")}</p>
                     <p className="text-xs text-muted-foreground">+243 XX XXX XXXX</p>
                   </div>
                 </div>
@@ -365,7 +363,7 @@ function Location() {
                       </div>
                     </div>
                     <h3 className="text-2xl font-bold">OmniCore</h3>
-                    <p className="text-muted-foreground mt-2">Innovation depuis Kalemie</p>
+                    <p className="text-muted-foreground mt-2">{t("locationTagline")}</p>
                     <div className="mt-6 flex justify-center gap-3">
                       {["RDC", "Afrique", "Monde"].map((label) => (
                         <span key={label} className="px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary border border-primary/20">
@@ -388,6 +386,7 @@ function Location() {
 
 /* ───── CTA ───── */
 function CTASection() {
+  const t = useTranslations("marketing");
   return (
     <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -397,20 +396,20 @@ function CTASection() {
         <ScrollReveal>
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
             <Sparkles className="h-4 w-4" />
-            <span>Rejoignez-nous</span>
+            <span>{t("ctaBadge")}</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-6">
-            Prêt à transformer votre entreprise ?
+            {t("ctaTitle")}
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10">
-            Découvrez comment OmniCore peut moderniser la gestion de votre organisation.
+            {t("ctaDescription")}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button size="xl" asChild className="gap-2 w-full sm:w-auto shadow-xl shadow-primary/30 bg-gradient-to-r from-primary to-primary/90">
-              <a href={localePath("/signup")}>Commencer gratuitement <ArrowRight className="h-5 w-5" /></a>
+              <a href={localePath("/signup")}>{t("ctaButton")} <ArrowRight className="h-5 w-5" /></a>
             </Button>
             <Button variant="outline" size="xl" asChild className="w-full sm:w-auto">
-              <a href={localePath("/contact")}>Nous contacter</a>
+              <a href={localePath("/contact")}>{t("ctaContact")}</a>
             </Button>
           </div>
         </ScrollReveal>
@@ -422,6 +421,7 @@ function CTASection() {
 /* ───── Footer ───── */
 function Footer() {
   const currentYear = new Date().getFullYear();
+  const tf = useTranslations("landing");
   return (
     <footer className="border-t border-border/50 bg-gradient-to-b from-background to-muted/20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
@@ -435,28 +435,28 @@ function Footer() {
               <span className="text-lg font-bold">OmniCore</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-              Plateforme ERP cloud moderne pour les organisations de toutes tailles.
+              {tf("footerDescription")}
             </p>
           </div>
           <div>
-            <h4 className="font-semibold text-sm mb-4">Produit</h4>
+            <h4 className="font-semibold text-sm mb-4">{tf("footerProduct")}</h4>
             <ul className="space-y-2.5">
-              {[{ label: "Fonctionnalités", href: localePath("/features") }, { label: "Modules", href: localePath("/#modules") }, { label: "Tarifs", href: localePath("/pricing") }].map((link) => (
+              {[{ label: tf("footerFeatures"), href: localePath("/features") }, { label: tf("footerModules"), href: localePath("/#modules") }, { label: tf("footerPricing"), href: localePath("/pricing") }].map((link) => (
                 <li key={link.label}><a href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{link.label}</a></li>
               ))}
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold text-sm mb-4">Entreprise</h4>
+            <h4 className="font-semibold text-sm mb-4">{tf("footerCompany")}</h4>
             <ul className="space-y-2.5">
-              {[{ label: "À propos", href: localePath("/about") }, { label: "Contact", href: localePath("/contact") }, { label: "Confidentialité", href: localePath("/privacy") }].map((link) => (
+              {[{ label: tf("footerAbout"), href: localePath("/about") }, { label: tf("footerContact"), href: localePath("/contact") }, { label: tf("footerPrivacy"), href: localePath("/privacy") }].map((link) => (
                 <li key={link.label}><a href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{link.label}</a></li>
               ))}
             </ul>
           </div>
         </div>
         <div className="mt-12 pt-8 border-t border-border/40 text-center">
-          <p className="text-xs text-muted-foreground">&copy; {currentYear} OmniCore. Tous droits réservés.</p>
+          <p className="text-xs text-muted-foreground">&copy; {currentYear} OmniCore. {tf("footerAllRights")}</p>
         </div>
       </div>
     </footer>

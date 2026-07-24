@@ -1,6 +1,7 @@
 "use client";
 
 import { useTheme } from "@/components/theme-provider";
+import { useTranslations } from "next-intl";
 import { Moon, Sun, Monitor } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const t = useTranslations("common");
 
   useEffect(() => setMounted(true), []);
 
@@ -31,16 +33,18 @@ export function ThemeToggle() {
       <Monitor className="h-4 w-4" />
     );
 
+  const nextLabel = nextTheme === "dark" ? t("darkMode") : nextTheme === "light" ? t("lightMode") : t("systemMode");
+
   return (
     <Button
       variant="ghost"
       size="icon-sm"
       onClick={() => setTheme(nextTheme)}
       className="relative"
-      title={`Passer en mode ${nextTheme === "dark" ? "sombre" : nextTheme === "light" ? "clair" : "système"}`}
+      title={t("switchTheme", { mode: nextLabel })}
     >
       {Icon}
-      <span className="sr-only">Changer de thème</span>
+      <span className="sr-only">{t("changeTheme")}</span>
     </Button>
   );
 }

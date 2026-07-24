@@ -353,7 +353,7 @@ export function AIChat({
                   {rateLimited && (
                     <div className="flex items-center gap-1 text-[10px] text-amber-500 mr-1">
                       <AlertTriangle className="h-3 w-3" />
-                      <span>Limite atteinte</span>
+                      <span>{t("rateLimited")}</span>
                     </div>
                   )}
                   <Button
@@ -370,8 +370,7 @@ export function AIChat({
                   </Button>
                 </form>
                 <p className="text-[9px] text-muted-foreground/50 text-center mt-1.5 leading-relaxed px-2">
-                  Powered by <span className="font-semibold">OmniCore</span> AI · &copy; 2026 OmniCore<br />
-                  <span>Developed by John Mocket</span>
+                  {t("footer")}
                 </p>
               </div>
             </div>

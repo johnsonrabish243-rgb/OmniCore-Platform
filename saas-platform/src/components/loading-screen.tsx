@@ -95,7 +95,7 @@ export function LoadingScreen({ message, minimal = false, loggedIn = false }: Lo
 
       {!message && (
         <p className="mt-4 text-[10px] text-muted-foreground/60">
-          &copy; 2026 OmniCore. D&eacute;velopp&eacute; par John Mocket.
+          {t("footer")}
         </p>
       )}
     </div>

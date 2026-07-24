@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 import {
   ArrowRight,
   Menu,
@@ -63,6 +64,7 @@ function localePath(path: string): string {
 
 /* ───── Navigation ───── */
 function LandingNav() {
+  const tl = useTranslations("landing");
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   useEffect(() => {
@@ -71,10 +73,10 @@ function LandingNav() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
   const navLinks = [
-    { label: "Fonctionnalités", href: localePath("/features") },
-    { label: "Modules", href: localePath("/#modules") },
-    { label: "À propos", href: localePath("/about") },
-    { label: "Contact", href: localePath("/contact") },
+    { label: tl("navFeatures"), href: localePath("/features") },
+    { label: tl("navModules"), href: localePath("/#modules") },
+    { label: tl("navAbout"), href: localePath("/about") },
+    { label: tl("navContact"), href: localePath("/contact") },
   ];
   return (
     <nav className={cn("fixed top-0 left-0 right-0 z-50 transition-all duration-500", scrolled ? "bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm" : "bg-transparent")}>
@@ -96,8 +98,8 @@ function LandingNav() {
             ))}
           </div>
           <div className="hidden lg:flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild><a href={localePath("/login")}>Se connecter</a></Button>
-            <Button size="sm" asChild className="gap-1.5 shadow-lg shadow-primary/20"><a href={localePath("/signup")}>Commencer <ArrowRight className="h-3.5 w-3.5" /></a></Button>
+            <Button variant="ghost" size="sm" asChild><a href={localePath("/login")}>{tl("signIn")}</a></Button>
+            <Button size="sm" asChild className="gap-1.5 shadow-lg shadow-primary/20"><a href={localePath("/signup")}>{tl("getStarted")} <ArrowRight className="h-3.5 w-3.5" /></a></Button>
           </div>
           <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden flex items-center justify-center h-10 w-10 rounded-[10px] hover:bg-accent transition-colors">
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -110,8 +112,8 @@ function LandingNav() {
             <a key={link.label} href={link.href} onClick={() => setMobileOpen(false)} className="block px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground rounded-[10px] hover:bg-accent transition-colors">{link.label}</a>
           ))}
           <div className="pt-3 flex flex-col gap-2">
-            <Button variant="outline" size="sm" asChild className="w-full justify-center"><a href={localePath("/login")}>Se connecter</a></Button>
-            <Button size="sm" asChild className="w-full justify-center gap-1.5"><a href={localePath("/signup")}>Commencer <ArrowRight className="h-3.5 w-3.5" /></a></Button>
+            <Button variant="outline" size="sm" asChild className="w-full justify-center"><a href={localePath("/login")}>{tl("signIn")}</a></Button>
+            <Button size="sm" asChild className="w-full justify-center gap-1.5"><a href={localePath("/signup")}>{tl("getStarted")} <ArrowRight className="h-3.5 w-3.5" /></a></Button>
           </div>
         </div>
       </div>
@@ -121,6 +123,7 @@ function LandingNav() {
 
 /* ───── Contact Form ───── */
 function ContactForm() {
+  const t = useTranslations("marketing");
   const [form, setForm] = useState({
     fullName: "",
     companyName: "",
@@ -158,11 +161,11 @@ function ContactForm() {
         setStatus("success");
       } else {
         setStatus("error");
-        setErrorMsg(data.error || "Une erreur est survenue.");
+        setErrorMsg(data.error || t("formGenericError"));
       }
     } catch {
       setStatus("error");
-      setErrorMsg("Erreur de connexion. Veuillez réessayer.");
+      setErrorMsg(t("formConnectionError"));
     }
   };
 
@@ -172,12 +175,12 @@ function ContactForm() {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 mb-6 shadow-lg">
           <CheckCircle className="h-8 w-8" />
         </div>
-        <h3 className="text-2xl font-bold mb-2">Demande envoyée !</h3>
+        <h3 className="text-2xl font-bold mb-2">{t("formSuccessTitle")}</h3>
         <p className="text-muted-foreground max-w-md mb-6">
-          Merci pour votre intérêt. Notre équipe vous contactera dans les plus brefs délais pour confirmer votre rendez-vous.
+          {t("formSuccessDescription")}
         </p>
         <Button variant="outline" onClick={() => { setStatus("idle"); setForm({ fullName: "", companyName: "", email: "", phone: "", country: "", organizationType: "", interestedModule: "", preferredDate: "", preferredTime: "", meetingType: "", reasonForAppointment: "", message: "" }); }}>
-          Envoyer une autre demande
+          {t("formSuccessNewRequest")}
         </Button>
       </div>
     );
@@ -190,17 +193,17 @@ function ContactForm() {
       {/* Row: Name + Company */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1.5">Nom complet *</label>
+          <label className="block text-sm font-medium mb-1.5">{t("formNameLabel")}</label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input name="fullName" required value={form.fullName} onChange={handleChange} placeholder="Jean Dupont" className={cn("pl-10", inputClass)} />
+            <Input name="fullName" required value={form.fullName} onChange={handleChange} placeholder={t("formNamePlaceholder")} className={cn("pl-10", inputClass)} />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1.5">Nom de l&apos;entreprise</label>
+          <label className="block text-sm font-medium mb-1.5">{t("formCompanyLabel")}</label>
           <div className="relative">
             <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input name="companyName" value={form.companyName} onChange={handleChange} placeholder="Votre entreprise" className={cn("pl-10", inputClass)} />
+            <Input name="companyName" value={form.companyName} onChange={handleChange} placeholder={t("formCompanyPlaceholder")} className={cn("pl-10", inputClass)} />
           </div>
         </div>
       </div>
@@ -208,17 +211,17 @@ function ContactForm() {
       {/* Row: Email + Phone */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1.5">Email *</label>
+          <label className="block text-sm font-medium mb-1.5">{t("formEmailLabel")}</label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input name="email" type="email" required value={form.email} onChange={handleChange} placeholder="jean@entreprise.com" className={cn("pl-10", inputClass)} />
+            <Input name="email" type="email" required value={form.email} onChange={handleChange} placeholder={t("formEmailPlaceholder")} className={cn("pl-10", inputClass)} />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1.5">Téléphone</label>
+          <label className="block text-sm font-medium mb-1.5">{t("formPhoneLabel")}</label>
           <div className="relative">
             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input name="phone" value={form.phone} onChange={handleChange} placeholder="+243 XX XXX XXXX" className={cn("pl-10", inputClass)} />
+            <Input name="phone" value={form.phone} onChange={handleChange} placeholder={t("formPhonePlaceholder")} className={cn("pl-10", inputClass)} />
           </div>
         </div>
       </div>
@@ -226,24 +229,24 @@ function ContactForm() {
       {/* Row: Country + Org Type */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1.5">Pays</label>
+          <label className="block text-sm font-medium mb-1.5">{t("formCountryLabel")}</label>
           <div className="relative">
             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input name="country" value={form.country} onChange={handleChange} placeholder="RDC, Congo, etc." className={cn("pl-10", inputClass)} />
+            <Input name="country" value={form.country} onChange={handleChange} placeholder={t("formCountryPlaceholder")} className={cn("pl-10", inputClass)} />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1.5">Type d&apos;organisation</label>
+          <label className="block text-sm font-medium mb-1.5">{t("formOrgTypeLabel")}</label>
           <div className="relative">
             <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <select name="organizationType" value={form.organizationType} onChange={handleChange} className={cn("flex h-10 w-full rounded-[10px] border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200", inputClass)}>
               <option value="">Sélectionnez...</option>
-              <option value="startup">Startup</option>
-              <option value="pme">PME</option>
-              <option value="grande">Grande entreprise</option>
-              <option value="ong">ONG / Association</option>
-              <option value="gouvernement">Gouvernement / Public</option>
-              <option value="scolaire">École / Université</option>
+              <option value="startup">{t("selectStartup")}</option>
+              <option value="pme">{t("selectSME")}</option>
+              <option value="grande">{t("selectLargeEnterprise")}</option>
+              <option value="ong">{t("selectNGO")}</option>
+              <option value="gouvernement">{t("selectPublicSector")}</option>
+              <option value="scolaire">{t("selectEducational")}</option>
               <option value="hopital">Hôpital / Clinique</option>
               <option value="pharmacie">Pharmacie</option>
               <option value="autre">Autre</option>
@@ -255,30 +258,30 @@ function ContactForm() {
       {/* Row: Module + Meeting Type */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1.5">Module intérêt</label>
+          <label className="block text-sm font-medium mb-1.5">{t("formModuleLabel")}</label>
           <div className="relative">
             <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <select name="interestedModule" value={form.interestedModule} onChange={handleChange} className={cn("flex h-10 w-full rounded-[10px] border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200", inputClass)}>
               <option value="">Sélectionnez...</option>
-              <option value="hr">Ressources Humaines</option>
+              <option value="hr">{t("selectHR")}</option>
               <option value="finance">Finance & Comptabilité</option>
-              <option value="healthcare">Santé & Pharmacie</option>
-              <option value="education">Éducation</option>
-              <option value="commerce">Commerce & Inventaire</option>
-              <option value="multiple">Plusieurs modules</option>
+              <option value="healthcare">{t("selectHealthcare")}</option>
+              <option value="education">{t("selectEducation")}</option>
+              <option value="commerce">{t("selectCommerce")}</option>
+              <option value="multiple">{t("selectAllModules")}</option>
               <option value="general">Information générale</option>
             </select>
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1.5">Type de réunion</label>
+          <label className="block text-sm font-medium mb-1.5">{t("formMeetingTypeLabel")}</label>
           <div className="relative">
             <Video className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <select name="meetingType" value={form.meetingType} onChange={handleChange} className={cn("flex h-10 w-full rounded-[10px] border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200", inputClass)}>
               <option value="">Sélectionnez...</option>
-              <option value="online">En ligne (Visioconférence)</option>
-              <option value="in-person">En personne</option>
-              <option value="phone">Par téléphone</option>
+              <option value="online">{t("meetingDiscovery")}</option>
+              <option value="in-person">{t("meetingDemo")}</option>
+              <option value="phone">{t("meetingQuote")}</option>
             </select>
           </div>
         </div>
@@ -287,14 +290,14 @@ function ContactForm() {
       {/* Row: Date + Time */}
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1.5">Date souhaitée</label>
+          <label className="block text-sm font-medium mb-1.5">{t("formDateLabel")}</label>
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input name="preferredDate" type="date" value={form.preferredDate} onChange={handleChange} className={cn("pl-10", inputClass)} />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1.5">Heure souhaitée</label>
+          <label className="block text-sm font-medium mb-1.5">{t("formTimeLabel")}</label>
           <div className="relative">
             <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input name="preferredTime" type="time" value={form.preferredTime} onChange={handleChange} className={cn("pl-10", inputClass)} />
@@ -304,7 +307,7 @@ function ContactForm() {
 
       {/* Reason */}
       <div>
-        <label className="block text-sm font-medium mb-1.5">Raison du rendez-vous</label>
+        <label className="block text-sm font-medium mb-1.5">{t("formReasonLabel")}</label>
         <div className="relative">
           <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <textarea
@@ -312,7 +315,7 @@ function ContactForm() {
             value={form.reasonForAppointment}
             onChange={handleChange}
             rows={2}
-            placeholder="Décrivez brièvement l'objet de votre demande..."
+            placeholder={t("formReasonPlaceholder")}
             className={cn("flex w-full rounded-[10px] border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 resize-none", inputClass)}
           />
         </div>
@@ -320,13 +323,13 @@ function ContactForm() {
 
       {/* Message */}
       <div>
-        <label className="block text-sm font-medium mb-1.5">Message complémentaire</label>
+        <label className="block text-sm font-medium mb-1.5">{t("formMessageLabel")}</label>
         <textarea
           name="message"
           value={form.message}
           onChange={handleChange}
           rows={4}
-          placeholder="Informations supplémentaires..."
+          placeholder={t("formMessagePlaceholder")}
           className={cn("flex w-full rounded-[10px] border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 resize-none", inputClass)}
         />
       </div>
@@ -340,9 +343,9 @@ function ContactForm() {
 
       <Button type="submit" size="lg" disabled={status === "submitting"} className="w-full sm:w-auto gap-2 shadow-xl shadow-primary/30 bg-gradient-to-r from-primary to-primary/90">
         {status === "submitting" ? (
-          <><Loader2 className="h-4 w-4 animate-spin" /> Envoi en cours...</>
+          <><Loader2 className="h-4 w-4 animate-spin" /> {t("formSending")}</>
         ) : (
-          <><Send className="h-4 w-4" /> Envoyer la demande</>
+          <><Send className="h-4 w-4" /> {t("formSendRequest")}</>
         )}
       </Button>
     </form>
@@ -351,6 +354,7 @@ function ContactForm() {
 
 /* ───── Contact Info Sidebar ───── */
 function ContactInfo() {
+  const t = useTranslations("marketing");
   const items = [
     { icon: Mail, label: "Email", value: "contact@omnicore.site", color: "from-blue-500 to-blue-600" },
     { icon: Phone, label: "Téléphone", value: "+243 XX XXX XXXX", color: "from-emerald-500 to-emerald-600" },
@@ -361,9 +365,9 @@ function ContactInfo() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-bold mb-2">Besoin d&apos;aide immédiate ?</h3>
+        <h3 className="text-lg font-bold mb-2">{t("contactInfoTitle")}</h3>
         <p className="text-sm text-muted-foreground">
-          Notre équipe est disponible pour répondre à toutes vos questions et vous accompagner dans votre choix.
+          {t("contactInfoDescription")}
         </p>
       </div>
 
@@ -384,10 +388,10 @@ function ContactInfo() {
       <div className="p-5 rounded-[16px] bg-gradient-to-br from-primary/10 to-purple-500/10 border border-primary/20">
         <div className="flex items-center gap-2 mb-2">
           <UsersIcon className="h-4 w-4 text-primary" />
-          <span className="font-semibold text-sm">Démo gratuite</span>
+          <span className="font-semibold text-sm">{t("sidebarDemoTitle")}</span>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Demandez une démonstration personnalisée pour découvrir comment OmniCore peut transformer la gestion de votre organisation.
+          {t("sidebarDemoDescription")}
         </p>
       </div>
     </div>
@@ -396,6 +400,7 @@ function ContactInfo() {
 
 /* ───── Hero ───── */
 function ContactHero() {
+  const t = useTranslations("marketing");
   return (
     <section className="relative pt-32 sm:pt-40 pb-16 sm:pb-20 overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -406,25 +411,23 @@ function ContactHero() {
         <div className="max-w-3xl mx-auto text-center">
           <ScrollReveal>
             <a href={localePath("/")} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
-              <ArrowLeft className="h-4 w-4" /> Retour à l&apos;accueil
+              <ArrowLeft className="h-4 w-4" /> {t("backToHome")}
             </a>
           </ScrollReveal>
           <ScrollReveal delay={100}>
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
               <MessageSquare className="h-4 w-4" />
-              <span>Contactez-nous</span>
+              <span>{t("pageTitle")}</span>
             </div>
           </ScrollReveal>
           <ScrollReveal delay={200}>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]">
-              Planifiez un
-              <br />
-              <span className="bg-gradient-to-r from-primary via-blue-500 to-purple-500 bg-clip-text text-transparent">rendez-vous</span>
+              {t("contactTitle")}
             </h1>
           </ScrollReveal>
           <ScrollReveal delay={300}>
             <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              Remplissez le formulaire ci-dessous pour demander une démonstration, obtenir un devis personnalisé ou discuter de vos besoins avec notre équipe.
+              {t("pageDescription")}
             </p>
           </ScrollReveal>
         </div>
@@ -435,6 +438,7 @@ function ContactHero() {
 
 /* ───── Footer ───── */
 function Footer() {
+  const tf = useTranslations("landing");
   const currentYear = new Date().getFullYear();
   return (
     <footer className="border-t border-border/50 bg-gradient-to-b from-background to-muted/20">
@@ -449,28 +453,28 @@ function Footer() {
               <span className="text-lg font-bold">OmniCore</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-              Plateforme ERP cloud moderne pour les organisations de toutes tailles.
+              {tf("footerDescription")}
             </p>
           </div>
           <div>
-            <h4 className="font-semibold text-sm mb-4">Produit</h4>
+            <h4 className="font-semibold text-sm mb-4">{tf("footerProduct")}</h4>
             <ul className="space-y-2.5">
-              {[{ label: "Fonctionnalités", href: localePath("/features") }, { label: "Modules", href: localePath("/#modules") }, { label: "Tarifs", href: localePath("/pricing") }].map((link) => (
+              {[{ label: tf("footerFeatures"), href: localePath("/features") }, { label: tf("footerModules"), href: localePath("/#modules") }, { label: tf("footerPricing"), href: localePath("/pricing") }].map((link) => (
                 <li key={link.label}><a href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{link.label}</a></li>
               ))}
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold text-sm mb-4">Entreprise</h4>
+            <h4 className="font-semibold text-sm mb-4">{tf("footerCompany")}</h4>
             <ul className="space-y-2.5">
-              {[{ label: "À propos", href: localePath("/about") }, { label: "Contact", href: localePath("/contact") }, { label: "Confidentialité", href: localePath("/privacy") }].map((link) => (
+              {[{ label: tf("footerAbout"), href: localePath("/about") }, { label: tf("footerContact"), href: localePath("/contact") }, { label: tf("footerPrivacy"), href: localePath("/privacy") }].map((link) => (
                 <li key={link.label}><a href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{link.label}</a></li>
               ))}
             </ul>
           </div>
         </div>
         <div className="mt-12 pt-8 border-t border-border/40 text-center">
-          <p className="text-xs text-muted-foreground">&copy; {currentYear} OmniCore. Tous droits réservés.</p>
+          <p className="text-xs text-muted-foreground">&copy; {currentYear} OmniCore. {tf("footerAllRights")}</p>
         </div>
       </div>
     </footer>
@@ -479,6 +483,7 @@ function Footer() {
 
 /* ───── Page ───── */
 export default function ContactPage() {
+  const t = useTranslations("marketing");
   return (
     <div className="min-h-screen bg-background">
       <LandingNav />
@@ -488,8 +493,8 @@ export default function ContactPage() {
           <div className="grid lg:grid-cols-5 gap-12 lg:gap-16">
             <div className="lg:col-span-3">
               <ScrollReveal>
-                <h2 className="text-2xl font-bold mb-2">Demander un rendez-vous</h2>
-                <p className="text-muted-foreground mb-8">Remplissez le formulaire et notre équipe vous recontactera sous 24 heures.</p>
+                <h2 className="text-2xl font-bold mb-2">{t("contactTitle")}</h2>
+                <p className="text-muted-foreground mb-8">{t("contactDescription")}</p>
               </ScrollReveal>
               <ScrollReveal delay={100}>
                 <ContactForm />

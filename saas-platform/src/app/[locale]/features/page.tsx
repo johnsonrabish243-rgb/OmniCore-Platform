@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -77,16 +78,17 @@ function localePath(path: string): string {
 function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const tl = useTranslations("landing");
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", h, { passive: true });
     return () => window.removeEventListener("scroll", h);
   }, []);
   const navLinks = [
-    { label: "Fonctionnalités", href: localePath("/features") },
-    { label: "Modules", href: localePath("/#modules") },
-    { label: "À propos", href: localePath("/about") },
-    { label: "Contact", href: localePath("/contact") },
+    { label: tl("navFeatures"), href: localePath("/features") },
+    { label: tl("navModules"), href: localePath("/#modules") },
+    { label: tl("navAbout"), href: localePath("/about") },
+    { label: tl("navContact"), href: localePath("/contact") },
   ];
   return (
     <nav className={cn("fixed top-0 left-0 right-0 z-50 transition-all duration-500", scrolled ? "bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm" : "bg-transparent")}>
@@ -108,8 +110,8 @@ function LandingNav() {
             ))}
           </div>
           <div className="hidden lg:flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild><a href={localePath("/login")}>Se connecter</a></Button>
-            <Button size="sm" asChild className="gap-1.5 shadow-lg shadow-primary/20"><a href={localePath("/signup")}>Commencer <ArrowRight className="h-3.5 w-3.5" /></a></Button>
+            <Button variant="ghost" size="sm" asChild><a href={localePath("/login")}>{tl("signIn")}</a></Button>
+            <Button size="sm" asChild className="gap-1.5 shadow-lg shadow-primary/20"><a href={localePath("/signup")}>{tl("getStarted")} <ArrowRight className="h-3.5 w-3.5" /></a></Button>
           </div>
           <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden flex items-center justify-center h-10 w-10 rounded-[10px] hover:bg-accent transition-colors">
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -122,8 +124,8 @@ function LandingNav() {
             <a key={l.label} href={l.href} onClick={() => setMobileOpen(false)} className="block px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground rounded-[10px] hover:bg-accent transition-colors">{l.label}</a>
           ))}
           <div className="pt-3 flex flex-col gap-2">
-            <Button variant="outline" size="sm" asChild className="w-full justify-center"><a href={localePath("/login")}>Se connecter</a></Button>
-            <Button size="sm" asChild className="w-full justify-center gap-1.5"><a href={localePath("/signup")}>Commencer <ArrowRight className="h-3.5 w-3.5" /></a></Button>
+            <Button variant="outline" size="sm" asChild className="w-full justify-center"><a href={localePath("/login")}>{tl("signIn")}</a></Button>
+            <Button size="sm" asChild className="w-full justify-center gap-1.5"><a href={localePath("/signup")}>{tl("getStarted")} <ArrowRight className="h-3.5 w-3.5" /></a></Button>
           </div>
         </div>
       </div>
@@ -183,6 +185,7 @@ const FEATURE_CATEGORIES = [
 ];
 
 function FeaturesHero() {
+  const t = useTranslations("marketing");
   return (
     <section className="relative pt-32 sm:pt-40 pb-16 sm:pb-24 overflow-hidden">
       <div className="absolute inset-0 -z-10">
@@ -193,26 +196,23 @@ function FeaturesHero() {
         <div className="max-w-3xl mx-auto text-center">
           <ScrollReveal>
             <a href={localePath("/")} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
-              <ArrowLeft className="h-4 w-4" /> Retour à l&apos;accueil
+              <ArrowLeft className="h-4 w-4" /> {t("backToHome")}
             </a>
           </ScrollReveal>
           <ScrollReveal delay={100}>
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-1.5 text-sm font-medium text-primary mb-6 shadow-sm">
               <Zap className="h-4 w-4" />
-              <span>Fonctionnalités</span>
+              <span>{t("featuresBadge")}</span>
             </div>
           </ScrollReveal>
           <ScrollReveal delay={200}>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-[1.1]">
-              Tout ce dont votre entreprise
-              <br />
-              <span className="bg-gradient-to-r from-primary via-blue-500 to-purple-500 bg-clip-text text-transparent">a besoin</span>
+              {t("featuresTitle")}
             </h1>
           </ScrollReveal>
           <ScrollReveal delay={300}>
             <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              Découvrez l&apos;ensemble des fonctionnalités qui font d&apos;OmniCore la plateforme ERP
-              de référence pour les organisations modernes.
+              {t("featuresDescription")}
             </p>
           </ScrollReveal>
         </div>
@@ -282,6 +282,7 @@ function CTASection() {
 
 function Footer() {
   const currentYear = new Date().getFullYear();
+  const tf = useTranslations("landing");
   return (
     <footer className="border-t border-border/50 bg-gradient-to-b from-background to-muted/20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
@@ -295,28 +296,28 @@ function Footer() {
               <span className="text-lg font-bold">OmniCore</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-              Plateforme ERP cloud moderne pour les organisations de toutes tailles.
+              {tf("footerDescription")}
             </p>
           </div>
           <div>
-            <h4 className="font-semibold text-sm mb-4">Produit</h4>
+            <h4 className="font-semibold text-sm mb-4">{tf("footerProduct")}</h4>
             <ul className="space-y-2.5">
-              {[{ label: "Fonctionnalités", href: localePath("/features") }, { label: "Modules", href: localePath("/#modules") }, { label: "Tarifs", href: localePath("/pricing") }].map((l) => (
+              {[{ label: tf("footerFeatures"), href: localePath("/features") }, { label: tf("footerModules"), href: localePath("/#modules") }, { label: tf("footerPricing"), href: localePath("/pricing") }].map((l) => (
                 <li key={l.label}><a href={l.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{l.label}</a></li>
               ))}
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold text-sm mb-4">Entreprise</h4>
+            <h4 className="font-semibold text-sm mb-4">{tf("footerCompany")}</h4>
             <ul className="space-y-2.5">
-              {[{ label: "À propos", href: localePath("/about") }, { label: "Contact", href: localePath("/contact") }, { label: "Confidentialité", href: localePath("/privacy") }].map((l) => (
+              {[{ label: tf("footerAbout"), href: localePath("/about") }, { label: tf("footerContact"), href: localePath("/contact") }, { label: tf("footerPrivacy"), href: localePath("/privacy") }].map((l) => (
                 <li key={l.label}><a href={l.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{l.label}</a></li>
               ))}
             </ul>
           </div>
         </div>
         <div className="mt-12 pt-8 border-t border-border/40 text-center">
-          <p className="text-xs text-muted-foreground">&copy; {currentYear} OmniCore. Tous droits réservés.</p>
+          <p className="text-xs text-muted-foreground">&copy; {currentYear} OmniCore. {tf("footerAllRights")}</p>
         </div>
       </div>
     </footer>

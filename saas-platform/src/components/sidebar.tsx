@@ -67,6 +67,7 @@ interface SidebarProps {
 
 /* ───── Workspace Switcher ───── */
 function WorkspaceSwitcher({ collapsed, activeWorkspaceId }: { collapsed: boolean; activeWorkspaceId?: string | null }) {
+  const ts = useTranslations("sidebar");
   const [workspaces, setWorkspaces] = useState<WorkspaceData[]>([]);
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -144,7 +145,7 @@ function WorkspaceSwitcher({ collapsed, activeWorkspaceId }: { collapsed: boolea
       <div className="px-3 pb-2">
         <div className="flex items-center gap-2 rounded-[10px] border border-border/30 bg-sidebar-muted/50 px-3 py-2">
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">Espaces...</span>
+          <span className="text-xs text-muted-foreground">{ts("loading")}</span>
         </div>
       </div>
     );
@@ -152,7 +153,7 @@ function WorkspaceSwitcher({ collapsed, activeWorkspaceId }: { collapsed: boolea
 
   if (workspaces.length === 0) return null;
 
-  const currentName = activeWorkspace?.name || workspaces[0]?.name || "Espace de travail";
+  const currentName = activeWorkspace?.name || workspaces[0]?.name || "";
 
   if (collapsed) {
     return (
@@ -168,7 +169,7 @@ function WorkspaceSwitcher({ collapsed, activeWorkspaceId }: { collapsed: boolea
           {open && (
             <div className="absolute left-0 top-full mt-1 z-50 w-56 rounded-[12px] border border-border/50 bg-popover p-1 shadow-xl animate-fade-in-up">
               <div className="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                Espaces de travail
+                {ts("workspaces")}
               </div>
               {workspaces.map((ws) => (
                 <button

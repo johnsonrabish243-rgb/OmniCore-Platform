@@ -4,33 +4,25 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "OmniCore | The Intelligent Workspace Platform",
-  description:
-    "Plateforme SaaS d'entreprise pour les organisations modernes. Gérez vos équipes, projets et opérations depuis un seul espace de travail intelligent.",
+  description: "Enterprise SaaS platform for modern organizations.",
   keywords: [
-    "SaaS",
-    "Enterprise",
-    "Workspace",
-    "CRM",
-    "Project Management",
-    "HR",
-    "OmniCore",
+    "SaaS", "Enterprise", "Workspace", "CRM",
+    "Project Management", "HR", "OmniCore",
   ],
   authors: [{ name: "OmniCore" }],
   creator: "OmniCore Inc.",
   publisher: "OmniCore Inc.",
   openGraph: {
     type: "website",
-    locale: "fr_FR",
+    locale: "en_US",
     siteName: "OmniCore",
     title: "OmniCore | The Intelligent Workspace Platform",
-    description:
-      "Plateforme SaaS d'entreprise pour les organisations modernes.",
+    description: "Enterprise SaaS platform for modern organizations.",
   },
   twitter: {
     card: "summary_large_image",
     title: "OmniCore | The Intelligent Workspace Platform",
-    description:
-      "Plateforme SaaS d'entreprise pour les organisations modernes.",
+    description: "Enterprise SaaS platform for modern organizations.",
   },
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
@@ -46,16 +38,10 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="fr"
+      lang="en"
       suppressHydrationWarning
     >
-      <head>
-        {/*
-          FOUC prevention is handled by next/script below.
-          Using Next.js Script (strategy="beforeInteractive") avoids
-          React 19's warning about inline <script> in component trees.
-        */}
-      </head>
+      <head />
       <body className="min-h-screen bg-background font-sans antialiased">
         {children}
         <Script id="theme-init" strategy="beforeInteractive">
@@ -67,6 +53,10 @@ export default function RootLayout({
                 var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
                 if (isDark) document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
+              } catch(e) {}
+              try {
+                var savedLocale = localStorage.getItem('omnicore_locale');
+                if (savedLocale) document.documentElement.lang = savedLocale;
               } catch(e) {}
             })();
           `}
