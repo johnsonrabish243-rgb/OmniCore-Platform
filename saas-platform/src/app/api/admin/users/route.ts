@@ -26,8 +26,21 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { email, password, firstName, lastName, role } = body;
 
+  const VALID_ROLES = ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE", "VIEWER"];
+
   if (!email || !password) {
     return NextResponse.json({ error: "Email et mot de passe requis" }, { status: 400 });
+  }
+
+  if (role && !VALID_ROLES.includes(role)) {
+    return NextResponse.json({ error: "Rôle invalide" }, { status: 400 });
+  }
+
+  if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+    return NextResponse.json(
+      { error: "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule et un chiffre." },
+      { status: 400 }
+    );
   }
 
   const supabase = await createClient();

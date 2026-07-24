@@ -34,15 +34,23 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const body = await request.json();
   const supabase = await createClient();
 
+  const VALID_ROLES = ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE", "VIEWER", "OWNER", "MEMBER"];
+
+  const updateData: Record<string, unknown> = {};
+  if (body.firstName) updateData.first_name = body.firstName;
+  if (body.lastName) updateData.last_name = body.lastName;
+  if (body.email) updateData.email = body.email;
+  if (body.role) {
+    if (!VALID_ROLES.includes(body.role)) {
+      return NextResponse.json({ error: "Rôle invalide" }, { status: 400 });
+    }
+    updateData.role = body.role;
+  }
+  if (body.isActive !== undefined) updateData.is_active = body.isActive;
+
   const { data: updated } = await supabase
     .from("users")
-    .update({
-      ...(body.firstName && { first_name: body.firstName }),
-      ...(body.lastName && { last_name: body.lastName }),
-      ...(body.email && { email: body.email }),
-      ...(body.role && { role: body.role }),
-      ...(body.isActive !== undefined && { is_active: body.isActive }),
-    })
+    .update(updateData)
     .eq("id", id)
     .select()
     .single();

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@insforge/sdk";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
+import { validateCSRFRequest } from "@/lib/csrf";
 
 const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL!;
 const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY!;
@@ -14,6 +16,20 @@ const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY!;
  */
 export async function POST(request: Request) {
   try {
+    if (!validateCSRFRequest(request)) {
+      return NextResponse.json({ error: "Requête invalide" }, { status: 403 });
+    }
+
+    const clientId = getClientIdentifier(request);
+    const rateLimit = await checkRateLimit("signup", clientId);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Trop de tentatives. Veuillez réessayer plus tard." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { email, password, firstName, lastName, companyName, workspace } = body;
 
@@ -21,6 +37,20 @@ export async function POST(request: Request) {
     if (!email || !password || !firstName || !lastName) {
       return NextResponse.json(
         { error: "Veuillez remplir tous les champs obligatoires." },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: "Le mot de passe doit contenir au moins 8 caractères." },
+        { status: 400 }
+      );
+    }
+
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      return NextResponse.json(
+        { error: "Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre." },
         { status: 400 }
       );
     }
@@ -54,7 +84,7 @@ export async function POST(request: Request) {
           { status: 409 }
         );
       }
-      console.error("Auth signup error:", message);
+      console.error("Auth signup error");
       return NextResponse.json(
         { error: "Erreur lors de la création du compte." },
         { status: 500 }
@@ -90,7 +120,7 @@ export async function POST(request: Request) {
     }]);
 
     if (profileError) {
-      console.error("Profile creation error:", profileError);
+      console.error("Profile creation error");
     }
 
     let orgId: string | null = null;
@@ -164,7 +194,7 @@ export async function POST(request: Request) {
       organization: orgId ? { id: orgId } : null,
     });
   } catch (error) {
-    console.error("Signup error:", error);
+    console.error("Signup error");
     return NextResponse.json(
       { error: "Une erreur est survenue lors de l'inscription." },
       { status: 500 }

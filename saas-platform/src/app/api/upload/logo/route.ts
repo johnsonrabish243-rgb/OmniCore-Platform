@@ -3,13 +3,15 @@ import { getCurrentUser } from "@/lib/auth-helpers";
 import { promises as fs } from "fs";
 import path from "path";
 
-function getExtension(fileName: string, contentType: string) {
-  const extension = path.extname(fileName);
-  if (extension) return extension;
+const ALLOWED_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+function getExtension(contentType: string): string | null {
   if (contentType === "image/png") return ".png";
   if (contentType === "image/jpeg") return ".jpg";
-  if (contentType === "image/svg+xml") return ".svg";
-  return ".png";
+  if (contentType === "image/gif") return ".gif";
+  if (contentType === "image/webp") return ".webp";
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -25,10 +27,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Aucun logo téléchargé" }, { status: 400 });
     }
 
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: "Le fichier dépasse la taille maximale de 5 Mo" }, { status: 400 });
+    }
+
+    const extension = getExtension(file.type);
+    if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
+      return NextResponse.json({ error: "Type de fichier non autorisé" }, { status: 400 });
+    }
+
     const uploadsDir = path.join(process.cwd(), "public", "uploads");
     await fs.mkdir(uploadsDir, { recursive: true });
 
-    const extension = getExtension(file.name, file.type);
     const fileName = `logo-${Date.now()}${extension}`;
     const filePath = path.join(uploadsDir, fileName);
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -37,7 +47,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: `/uploads/${fileName}` });
   } catch (error) {
-    console.error("Logo upload error:", error);
+    console.error("Logo upload error");
     return NextResponse.json({ error: "Échec du téléchargement du logo." }, { status: 500 });
   }
 }

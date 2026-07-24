@@ -15,12 +15,11 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
-      console.error("Auth callback error:", error.message);
+      console.error("Auth callback error");
       return NextResponse.redirect(new URL("/fr/login?error=auth_callback_error", request.url));
     }
 
     if (data.user) {
-      // Check if user profile exists in our users table
       const { data: existingUser } = await supabase
         .from("users")
         .select("id")
@@ -28,7 +27,6 @@ export async function GET(request: Request) {
         .single();
 
       if (!existingUser) {
-        // Create user profile from OAuth data
         const { error: insertError } = await supabase.from("users").insert({
           id: data.user.id,
           email: data.user.email || "",
@@ -41,13 +39,12 @@ export async function GET(request: Request) {
         });
 
         if (insertError) {
-          console.error("Failed to create user profile from OAuth:", insertError.message);
+          console.error("Failed to create user profile from OAuth");
         }
       }
     }
   }
 
-  // Redirect to dashboard
   const locale = requestUrl.pathname.split("/")[1] || "fr";
   return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
 }

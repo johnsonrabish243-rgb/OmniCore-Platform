@@ -65,7 +65,10 @@ export default function SignUpPage() {
       // The server API uses admin client to auto-confirm and create session
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
         body: JSON.stringify({
           email,
           password,

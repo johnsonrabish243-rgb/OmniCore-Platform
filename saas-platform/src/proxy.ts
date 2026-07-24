@@ -1,6 +1,7 @@
 import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { randomBytes } from "crypto";
 import { routing } from "./i18n/routing";
 import { updateSession } from "./lib/supabase/middleware";
 
@@ -91,13 +92,14 @@ function isLanding(pathname: string): boolean {
  * - Referrer policy
  * - Permissions policy
  */
-function addSecurityHeaders(response: NextResponse): void {
-  // Content Security Policy
+function addSecurityHeaders(response: NextResponse, nonce?: string): void {
+  const nonceAttr = nonce ? `'nonce-${nonce}'` : "";
+
   response.headers.set(
     "Content-Security-Policy",
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-    "style-src 'self' 'unsafe-inline'; " +
+    `script-src 'self' ${nonceAttr}; ` +
+    `style-src 'self' ${nonceAttr}; ` +
     "img-src 'self' data: blob: https://ui-avatars.com https://4majgdg3.us-east.insforge.app; " +
     "font-src 'self' data:; " +
     "connect-src 'self' https://4majgdg3.us-east.insforge.app wss://4majgdg3.us-east.insforge.app; " +
@@ -141,6 +143,7 @@ function isProtected(pathname: string): boolean {
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const nonce = randomBytes(16).toString("base64");
 
   // Skip for static assets and API routes (API routes manage their own security)
   if (
@@ -150,8 +153,7 @@ export default async function proxy(request: NextRequest) {
     pathname.includes(".")
   ) {
     const response = NextResponse.next();
-    // Still add security headers
-    addSecurityHeaders(response);
+    addSecurityHeaders(response, nonce);
     return response;
   }
 
@@ -186,7 +188,7 @@ export default async function proxy(request: NextRequest) {
   response.headers.set("x-pathname", pathname);
   
   // Add security headers
-  addSecurityHeaders(response);
+  addSecurityHeaders(response, nonce);
   
   return response;
 }

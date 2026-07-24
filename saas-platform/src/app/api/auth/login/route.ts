@@ -1,9 +1,25 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
+import { validateCSRFRequest } from "@/lib/csrf";
 
 export async function POST(request: Request) {
   try {
+    if (!validateCSRFRequest(request)) {
+      return NextResponse.json({ error: "Requête invalide" }, { status: 403 });
+    }
+
+    const clientId = getClientIdentifier(request);
+    const rateLimit = await checkRateLimit("login", clientId);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Trop de tentatives. Veuillez réessayer plus tard." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { email, password } = body;
 
@@ -22,7 +38,7 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error("Supabase login error:", error.message);
+      console.error("Supabase login error");
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect." },
         { status: 401 }
@@ -108,7 +124,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("Login error");
     return NextResponse.json(
       { error: "Une erreur est survenue lors de la connexion." },
       { status: 500 }

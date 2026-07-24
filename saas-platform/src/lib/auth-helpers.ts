@@ -29,7 +29,7 @@ export async function getCurrentUser() {
       avatarUrl: profile.avatar_url,
     };
   } catch (error) {
-    console.error("getCurrentUser error:", error);
+    console.error("getCurrentUser error");
     return null;
   }
 }
@@ -80,7 +80,7 @@ export async function getActiveWorkspace() {
       isActive: workspace.is_active,
     };
   } catch (error) {
-    console.error("getActiveWorkspace error:", error);
+    console.error("getActiveWorkspace error");
     return null;
   }
 }

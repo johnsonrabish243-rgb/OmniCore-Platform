@@ -6,6 +6,10 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
 
+  if (!["SUPER_ADMIN", "ADMIN", "MANAGER"].includes(user.role)) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
+
   const workspace = await getActiveWorkspace();
   if (!workspace) {
     return NextResponse.json({ error: "Aucun espace de travail actif" }, { status: 400 });
