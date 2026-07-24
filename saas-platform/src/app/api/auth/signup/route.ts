@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@insforge/sdk";
-import { createClient } from "@/lib/supabase/server";
+import { createClient as createInsforgeClient, createAdminClient } from "@insforge/sdk";
 import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
 import { validateCSRFRequest } from "@/lib/csrf";
 import { generateVerificationToken } from "@/lib/verification-token";
 import { sendVerificationEmail } from "@/lib/email-service";
 
 const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL || "";
+const INSFORGE_ANON_KEY = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY || "";
 const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY || "";
 
 const VALID_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -74,15 +74,17 @@ export async function POST(request: Request) {
 
     const userLocale = ALLOWED_LOCALES.includes(locale) ? locale : "fr";
 
-    const admin = createAdminClient({ baseUrl: INSFORGE_URL, apiKey: INSFORGE_API_KEY });
-    const regularClient = await createClient();
+    // ── 1. Create auth user via InsForge SDK (regular client, not SSR) ──
+    const regularClient = createInsforgeClient({
+      baseUrl: INSFORGE_URL,
+      anonKey: INSFORGE_ANON_KEY,
+    });
 
     const { data: signUpData, error: signUpError } = await regularClient.auth.signUp({
       email,
       password,
-      options: {
-        data: { first_name: firstName, last_name: lastName },
-      },
+      name: `${firstName} ${lastName}`,
+      autoConfirm: true,
     });
 
     if (signUpError) {
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
       if (msg.includes("already") || msg.includes("existe") || msg.includes("registered")) {
         return NextResponse.json({ error: "Un compte avec cet email existe déjà." }, { status: 409 });
       }
-      return NextResponse.json({ error: "Erreur lors de la création du compte." }, { status: 500 });
+      return NextResponse.json({ error: "Erreur lors de la création du compte.", details: msg }, { status: 500 });
     }
 
     const userId = signUpData?.user?.id;
@@ -100,28 +102,33 @@ export async function POST(request: Request) {
     }
 
     const company = companyName?.trim() || `${firstName} ${lastName}`;
+    const admin = createAdminClient({ baseUrl: INSFORGE_URL, apiKey: INSFORGE_API_KEY });
 
-    const { error: profileError } = await admin.database.from("users").insert([{
-      id: userId,
-      email: email.toLowerCase().trim(),
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      role: "EMPLOYEE",
-      language: userLocale,
-      is_active: false,
-      email_confirmed_at: null,
-      preferred_module: selectedModule,
-    }]);
+    // ── 2. Create user profile in users table ──
+    try {
+      const { error: profileError } = await admin.database.from("users").insert([{
+        id: userId,
+        email: email.toLowerCase().trim(),
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        role: "EMPLOYEE",
+        language: userLocale,
+        is_active: false,
+        email_confirmed_at: null,
+      }]);
 
-    if (profileError) {
-      console.error("Profile creation error:", profileError.message);
+      if (profileError) {
+        console.error("Profile creation error:", profileError.message);
+      }
+    } catch (profileErr) {
+      console.error("Profile insert threw:", String(profileErr));
     }
 
+    // ── 3. Generate and store verification token ──
     const vt = generateVerificationToken();
 
-    const { error: tokenError } = await admin.database
-      .from("verification_tokens")
-      .insert([{
+    try {
+      const { error: tokenError } = await admin.database.from("verification_tokens").insert([{
         user_id: userId,
         type: "email_verification",
         hashed_code: vt.hashedCode,
@@ -130,29 +137,34 @@ export async function POST(request: Request) {
         used: false,
       }]);
 
-    if (tokenError) {
-      console.error("Verification token insert error:", tokenError.message);
+      if (tokenError) {
+        console.error("Verification token insert error:", tokenError.message);
+      }
+    } catch (tokenErr) {
+      console.error("Token insert threw:", String(tokenErr));
     }
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://omnicore.site";
-    const verificationLink = `${origin}/${userLocale}/verify-email?token=${vt.token}&userId=${userId}`;
+    // ── 4. Send verification email (non-blocking) ──
+    let emailSent = false;
+    try {
+      const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://omnicore.site";
+      const verificationLink = `${origin}/${userLocale}/verify-email?token=${vt.token}&userId=${userId}`;
+      emailSent = await sendVerificationEmail({
+        to: email,
+        name: firstName,
+        code: vt.code,
+        verificationLink,
+        locale: userLocale as "fr" | "en" | "sw",
+      });
+    } catch (emailErr) {
+      console.error("Email send threw (non-blocking):", String(emailErr));
+    }
 
-    const emailSent = await sendVerificationEmail({
-      to: email,
-      name: firstName,
-      code: vt.code,
-      verificationLink,
-      locale: userLocale as "fr" | "en" | "sw",
-    });
-
+    // ── 5. Create organization, workspace, membership ──
     let orgId: string | null = null;
-    let workspaceSlug: string | null = null;
 
     try {
-      const slug = company
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "") || `org-${userId.slice(0, 8)}`;
+      const slug = company.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `org-${userId.slice(0, 8)}`;
 
       const { data: org, error: orgError } = await admin.database
         .from("organizations")
@@ -160,20 +172,19 @@ export async function POST(request: Request) {
         .select()
         .single();
 
+      if (orgError) {
+        console.error("Organization creation error:", orgError.message);
+      }
+
       if (org) {
         orgId = org.id;
 
         await admin.database.from("organization_members").insert([{
-          organization_id: org.id,
-          user_id: userId,
-          role: "OWNER",
-          is_owner: true,
+          organization_id: org.id, user_id: userId, role: "OWNER", is_owner: true,
         }]);
 
         const wsSlug = `${company}-${selectedModule}`
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "") || `ws-${userId.slice(0, 8)}`;
+          .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `ws-${userId.slice(0, 8)}`;
 
         const { data: ws, error: wsError } = await admin.database
           .from("workspaces")
@@ -195,19 +206,18 @@ export async function POST(request: Request) {
           .select()
           .single();
 
+        if (wsError) {
+          console.error("Workspace creation error:", wsError.message);
+        }
+
         if (ws) {
-          workspaceSlug = ws.slug;
           await admin.database.from("workspace_members").insert([{
-            workspace_id: ws.id,
-            user_id: userId,
-            role: "OWNER",
+            workspace_id: ws.id, user_id: userId, role: "OWNER",
           }]);
         }
-        if (wsError) console.error("Workspace creation error:", wsError.message);
       }
-      if (orgError) console.error("Organization creation error:", orgError.message);
     } catch (orgErr) {
-      console.error("Org/workspace setup error:", String(orgErr));
+      console.error("Org/workspace setup error (non-blocking):", String(orgErr));
     }
 
     return NextResponse.json({
@@ -221,9 +231,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Signup error:", String(error));
-    return NextResponse.json(
-      { error: "Une erreur est survenue lors de l'inscription." },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      error: "Une erreur est survenue lors de l'inscription.",
+      details: String(error),
+    }, { status: 500 });
   }
 }
