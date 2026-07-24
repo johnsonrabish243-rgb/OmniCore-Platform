@@ -24,7 +24,6 @@ async function getRedis() {
   if (url && token) {
     try {
       // Dynamic import — fails gracefully if @upstash/redis is not installed
-      // @ts-expect-error @upstash/redis is an optional peer dependency
       const { Redis } = await import("@upstash/redis");
       redisClient = new Redis({ url, token });
     } catch {
