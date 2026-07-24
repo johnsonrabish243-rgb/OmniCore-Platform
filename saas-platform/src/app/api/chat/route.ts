@@ -549,7 +549,10 @@ export async function POST(req: Request) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Veuillez vous connecter pour utiliser l'assistant OmniCore AI." },
+        { status: 401 }
+      );
     }
 
     const ip = getClientIdentifier(req);

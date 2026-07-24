@@ -99,7 +99,16 @@ export function AIChat({
         }
 
         if (!res.ok) {
-          throw new Error("API request failed");
+          const errData = await res.json().catch(() => ({}));
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `error-${Date.now()}`,
+              role: "assistant",
+              content: errData.error || t("errorMessage"),
+            },
+          ]);
+          return;
         }
 
         const data = await res.json();
@@ -303,8 +312,9 @@ export function AIChat({
                     )}
                   </Button>
                 </form>
-                <p className="text-[9px] text-muted-foreground/50 text-center mt-1.5">
-                  Powered by <span className="font-semibold">OmniCore</span> AI
+                <p className="text-[9px] text-muted-foreground/50 text-center mt-1.5 leading-relaxed px-2">
+                  Powered by <span className="font-semibold">OmniCore</span> AI · &copy; 2026 OmniCore<br />
+                  <span>Developed by John Mocket</span>
                 </p>
               </div>
             </div>
