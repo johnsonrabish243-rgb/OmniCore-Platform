@@ -1,8 +1,13 @@
 {
   "app": {
     "name": "OmniCore",
-    "tagline": "The Intelligent Workspace Platform",
-    "description": "Enterprise SaaS Platform for Modern Organizations"
+    "tagline": "The Intelligent Work Platform",
+    "description": "Enterprise SaaS platform for modern organizations"
+  },
+  "loading": {
+    "workspace": "Loading your workspace...",
+    "generic": "Just a moment, preparing your OmniCore experience...",
+    "minimal": "Loading..."
   },
   "nav": {
     "dashboard": "Dashboard",

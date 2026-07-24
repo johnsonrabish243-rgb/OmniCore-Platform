@@ -4,6 +4,11 @@
     "tagline": "La Plateforme de Travail Intelligente",
     "description": "Plateforme SaaS d'entreprise pour les organisations modernes"
   },
+  "loading": {
+    "workspace": "Chargement de votre espace de travail...",
+    "generic": "Un instant, nous préparons votre expérience OmniCore...",
+    "minimal": "Chargement..."
+  },
   "nav": {
     "dashboard": "Tableau de Bord",
     "analytics": "Analytique",

@@ -1,8 +1,13 @@
 {
   "app": {
     "name": "OmniCore",
-    "tagline": "Jukwaa Mahiri la Kufanyia Kazi",
-    "description": "Jukwaa la Biashara la SaaS kwa Mashirika ya Kisasa"
+    "tagline": "Jukwaa Mahiri la Kazi",
+    "description": "Jukwaa la SaaS la biashara kwa mashirika ya kisasa"
+  },
+  "loading": {
+    "workspace": "Inapakia nafasi yako ya kazi...",
+    "generic": "Tafadhali subiri, tunatayarisha uzoefu wako wa OmniCore...",
+    "minimal": "Inapakia..."
   },
   "nav": {
     "dashboard": "Dashibodi",

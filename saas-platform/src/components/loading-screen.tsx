@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 interface LoadingScreenProps {
   message?: string;
   minimal?: boolean;
+  loggedIn?: boolean;
 }
 
-export function LoadingScreen({ message, minimal = false }: LoadingScreenProps) {
+export function LoadingScreen({ message, minimal = false, loggedIn = false }: LoadingScreenProps) {
+  const t = useTranslations("loading");
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -18,21 +21,19 @@ export function LoadingScreen({ message, minimal = false }: LoadingScreenProps) 
           clearInterval(interval);
           return 90;
         }
-        // Slow down as we approach 90%
         const increment = prev < 30 ? 8 : prev < 60 ? 5 : prev < 80 ? 3 : 1;
         return Math.min(prev + increment, 90);
       });
     }, 200);
-
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    // Once loading is truly done, the parent will unmount this component.
-    // But if it doesn't, we can set to 100 after a timeout.
     const timeout = setTimeout(() => setProgress(100), 30000);
     return () => clearTimeout(timeout);
   }, []);
+
+  const displayMessage = message || (loggedIn ? t("workspace") : t("generic"));
 
   if (minimal) {
     return (
@@ -49,8 +50,8 @@ export function LoadingScreen({ message, minimal = false }: LoadingScreenProps) 
               style={{ width: `${progress}%` }}
             />
           </div>
-          {message && (
-            <p className="text-xs text-muted-foreground">{message}</p>
+          {displayMessage && (
+            <p className="text-xs text-muted-foreground">{displayMessage}</p>
           )}
         </div>
       </div>
@@ -59,7 +60,6 @@ export function LoadingScreen({ message, minimal = false }: LoadingScreenProps) 
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background">
-      {/* Logo */}
       <div className="mb-6 animate-fade-in-up">
         <div className="flex items-center gap-3">
           <img
@@ -72,13 +72,12 @@ export function LoadingScreen({ message, minimal = false }: LoadingScreenProps) 
               OmniCore
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Chargement de votre espace de travail...
+              {displayMessage}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Progress Bar */}
       <div className="w-64 sm:w-80 mt-6">
         <div className="h-2 rounded-full bg-muted overflow-hidden shadow-inner">
           <div
@@ -88,20 +87,17 @@ export function LoadingScreen({ message, minimal = false }: LoadingScreenProps) 
         </div>
       </div>
 
-      {/* Loading Message */}
       {message && (
         <p className="mt-4 text-xs text-muted-foreground animate-pulse-soft">
           {message}
         </p>
       )}
 
-      {/* Default Footer */}
       {!message && (
         <p className="mt-4 text-[10px] text-muted-foreground/60">
-          &copy; 2026 OmniCore. Développé par John Mocket.
+          &copy; 2026 OmniCore. D&eacute;velopp&eacute; par John Mocket.
         </p>
       )}
     </div>
   );
 }
-
