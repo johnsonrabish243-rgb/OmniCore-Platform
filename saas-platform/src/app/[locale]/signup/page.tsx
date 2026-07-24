@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
-import { OmniCaptcha } from "@/components/omnicaptcha";
+
 import {
   Mail,
   Lock,
@@ -33,8 +33,7 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [selectedWorkspace, setSelectedWorkspace] = useState("");
-  const [captchaVerified, setCaptchaVerified] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | undefined>();
+
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -57,12 +56,6 @@ export default function SignUpPage() {
         return;
       }
 
-      if (!captchaVerified) {
-        setError(t('captchaRequired'));
-        setIsLoading(false);
-        return;
-      }
-
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
@@ -77,7 +70,7 @@ export default function SignUpPage() {
           companyName: company,
           locale,
           acceptedTerms,
-          captchaToken,
+
         }),
       });
 
@@ -314,19 +307,11 @@ export default function SignUpPage() {
                     </label>
                   </div>
 
-                  {/* OmniCaptcha */}
-                  <OmniCaptcha
-                    onVerify={(verified, token) => {
-                      setCaptchaVerified(verified);
-                      if (token) setCaptchaToken(token);
-                    }}
-                  />
-
                   <Button
                     type="submit"
                     className="w-full h-11"
                     loading={isLoading}
-                    disabled={!captchaVerified}
+
                   >
                     {t("createAccount")}
                   </Button>

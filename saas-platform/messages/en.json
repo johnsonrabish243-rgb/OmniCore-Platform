@@ -968,18 +968,7 @@
     "open": "Open",
     "close": "Close"
   },
-  "omniCaptcha": {
-    "title": "Security verification",
-    "answerPlaceholder": "Your answer",
-    "verify": "Verify",
-    "refresh": "New challenge",
-    "verified": "✓ Verified",
-    "incorrect": "Incorrect answer. Try again.",
-    "loadError": "Unable to load captcha",
-    "verifyError": "Verification failed",
-    "footer": "Protected by OmniCaptcha"
-  },
-  "marketing": {
+"marketing": {
     "backToHome": "Back to home",
     "aboutBadge": "About OmniCore",
     "aboutTitle1": "An innovative company",

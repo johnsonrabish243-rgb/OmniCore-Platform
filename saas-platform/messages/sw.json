@@ -950,18 +950,7 @@
     "open": "Fungua",
     "close": "Funga"
   },
-  "omniCaptcha": {
-    "title": "Uthibitisho wa usalama",
-    "answerPlaceholder": "Jibu lako",
-    "verify": "Thibitisha",
-    "refresh": "Changamoto mpya",
-    "verified": "✓ Imethibitishwa",
-    "incorrect": "Jibu si sahihi. Jaribu tena.",
-    "loadError": "Imeshindwa kupakia captcha",
-    "verifyError": "Uthibitisho umeshindwa",
-    "footer": "Inalindwa na OmniCaptcha"
-  },
-  "marketing": {
+"marketing": {
     "backToHome": "Rudi nyumbani",
     "aboutBadge": "Kuhusu OmniCore",
     "aboutTitle1": "Kampuni ya ubunifu",

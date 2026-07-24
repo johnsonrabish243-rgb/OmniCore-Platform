@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
-import { OmniCaptcha } from "@/components/omnicaptcha";
+
 import { getCSRFHeaders } from "@/lib/csrf";
 import {
   Mail,
@@ -27,8 +27,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [captchaVerified, setCaptchaVerified] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string>();
+
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -47,17 +46,11 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
-    if (!captchaVerified) {
-      setError(t("captchaRequired"));
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { ...getCSRFHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, locale, captchaToken }),
+        body: JSON.stringify({ email, password, locale }),
       });
 
       const data = await res.json();
@@ -162,14 +155,6 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-
-              <OmniCaptcha
-                onVerify={(verified, token) => {
-                  setCaptchaVerified(verified);
-                  if (token) setCaptchaToken(token);
-                }}
-                invisible
-              />
 
               {successMessage && (
                 <div className="rounded-[10px] bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">

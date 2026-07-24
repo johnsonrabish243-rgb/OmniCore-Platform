@@ -950,18 +950,7 @@
     "open": "Ouvrir",
     "close": "Fermer"
   },
-  "omniCaptcha": {
-    "title": "Vérification de sécurité",
-    "answerPlaceholder": "Votre réponse",
-    "verify": "Vérifier",
-    "refresh": "Nouveau défi",
-    "verified": "✓ Vérifié",
-    "incorrect": "Réponse incorrecte. Réessayez.",
-    "loadError": "Impossible de charger le captcha",
-    "verifyError": "La vérification a échoué",
-    "footer": "Protégé par OmniCaptcha"
-  },
-  "marketing": {
+"marketing": {
     "backToHome": "Retour à l'accueil",
     "aboutBadge": "À propos d'OmniCore",
     "aboutTitle1": "Une entreprise innovante",

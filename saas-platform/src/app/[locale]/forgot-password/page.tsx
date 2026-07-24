@@ -6,7 +6,7 @@ import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { OmniCaptcha } from "@/components/omnicaptcha";
+
 import { getCSRFHeaders } from "@/lib/csrf";
 import { Mail, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 
@@ -16,25 +16,18 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
-  const [captchaVerified, setCaptchaVerified] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string>();
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
-    if (!captchaVerified) {
-      setError(t("captchaRequired"));
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { ...getCSRFHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ email, captchaToken }),
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
 
@@ -113,14 +106,6 @@ export default function ForgotPasswordPage() {
                   />
                 </div>
               </div>
-
-              <OmniCaptcha
-                onVerify={(verified, token) => {
-                  setCaptchaVerified(verified);
-                  if (token) setCaptchaToken(token);
-                }}
-                invisible
-              />
 
               {error && (
                 <p className="text-sm text-destructive">{error}</p>

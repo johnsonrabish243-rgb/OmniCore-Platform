@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
 import { validateCSRFRequest } from "@/lib/csrf";
-import { isTokenUsed, sensitiveRateLimiter } from "@/lib/omnicaptcha";
+
 
 export async function POST(request: Request) {
   try {
@@ -21,13 +21,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { email, captchaToken } = body;
-
-    if (!captchaToken || !isTokenUsed(captchaToken)) {
-      const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-      sensitiveRateLimiter.check(`captcha:abuse:${ip}`);
-      return NextResponse.json({ error: "Vérification de sécurité échouée." }, { status: 400 });
-    }
+    const { email } = body;
 
     if (!email) {
       return NextResponse.json({ error: "Email requis" }, { status: 400 });

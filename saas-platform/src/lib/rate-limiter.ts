@@ -44,7 +44,6 @@ function getRateLimitConfig(endpoint: string): { maxAttempts: number; windowMs: 
     "verify-email": { maxAttempts: 10, windowMs: 15 * 60 * 1000 },
     "resend-verification": { maxAttempts: 3, windowMs: 60 * 60 * 1000 },
     "contact": { maxAttempts: 3, windowMs: 60 * 60 * 1000 },
-    captcha: { maxAttempts: 10, windowMs: 60 * 1000 },
     chat: { maxAttempts: 5, windowMs: 60 * 1000 },
   };
   return configs[endpoint] || { maxAttempts: 10, windowMs: 60 * 1000 };
