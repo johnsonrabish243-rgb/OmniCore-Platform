@@ -15,7 +15,7 @@ interface Props {
   className?: string; invisible?: boolean; id?: string;
 }
 
-const STORAGE_KEY = "omnicaptcha:verified";
+const STORAGE_KEY = "omnicaptcha:token";
 
 export function OmniCaptcha({ onVerify, className, invisible, id }: Props) {
   const t = useTranslations("omniCaptcha");
@@ -25,7 +25,6 @@ export function OmniCaptcha({ onVerify, className, invisible, id }: Props) {
   const [error, setError] = useState("");
   const verifiedRef = useRef(false);
   const keyRef = useRef(0);
-  const restored = useRef(false);
 
   const gen = useCallback(async () => {
     setStatus("loading"); setError(""); verifiedRef.current = false;
@@ -44,12 +43,21 @@ export function OmniCaptcha({ onVerify, className, invisible, id }: Props) {
   }, [t, locale, invisible, onVerify]);
 
   useEffect(() => {
-    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(STORAGE_KEY)) {
-      setStatus("valid"); verifiedRef.current = true; restored.current = true;
-      onVerify(true);
-      return;
-    }
-    gen();
+    if (typeof sessionStorage === "undefined") { gen(); return; }
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (!stored) { gen(); return; }
+    fetch("/api/captcha/validate-token", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: stored }),
+    }).then(r => r.json()).then(r => {
+      if (r.valid) {
+        setStatus("valid"); verifiedRef.current = true;
+        onVerify(true, stored);
+      } else {
+        sessionStorage.removeItem(STORAGE_KEY);
+        gen();
+      }
+    }).catch(() => gen());
   }, [gen, onVerify]);
 
   const submit = async (answer: string) => {
@@ -63,7 +71,7 @@ export function OmniCaptcha({ onVerify, className, invisible, id }: Props) {
       const r = await res.json();
       if (r.valid) {
         setStatus("valid"); verifiedRef.current = true;
-        try { sessionStorage.setItem(STORAGE_KEY, "1"); } catch {}
+        try { sessionStorage.setItem(STORAGE_KEY, captcha.token); } catch {}
         onVerify(true, captcha.token);
       } else { setStatus("invalid"); setError(t("incorrect")); onVerify(false); setTimeout(() => gen(), 1500); }
     } catch { setStatus("invalid"); setError(t("verifyError")); onVerify(false); }
@@ -138,45 +146,40 @@ function Renderer({ type, data, status, onSubmit, error, t }: {
   type: ChallengeType; data: ChallengeData; status: string; onSubmit: (a: string) => void; error: string; t: (k: string) => string;
 }) {
   switch (type) {
-    case "checkbox": return <CheckboxChallenge data={data as any} status={status} onSubmit={onSubmit} t={t} />;
+    case "icon-match": return <IconMatch data={data as any} status={status} onSubmit={onSubmit} error={error} t={t} />;
     case "image-select": return <ImageSelect data={data as any} status={status} onSubmit={onSubmit} error={error} t={t} />;
     case "puzzle-grid": return <PuzzleGrid data={data as any} status={status} onSubmit={onSubmit} error={error} t={t} />;
-    case "math": return <MathChallenge data={data as any} status={status} onSubmit={onSubmit} error={error} t={t} />;
+    case "find-missing": return <FindMissing data={data as any} status={status} onSubmit={onSubmit} error={error} t={t} />;
     default: return null;
   }
 }
 
-/* ─── 1. Checkbox (like hCaptcha main flow) ─── */
+/* ─── 1. Icon Match — "Tap the [emoji]" ─── */
 
-function CheckboxChallenge({ data, status, onSubmit, t }: any) {
-  const [checked, setChecked] = useState(false);
+function IconMatch({ data, status, onSubmit, error, t }: any) {
+  const [selected, setSelected] = useState<number | null>(null);
 
   return (
-    <label className={cn(
-      "flex items-center gap-3 p-3 rounded-[10px] border-2 cursor-pointer transition-all select-none",
-      "hover:bg-accent/50",
-      checked ? "border-primary bg-primary/5" : "border-border/50",
-      status === "verifying" && "opacity-50 pointer-events-none"
-    )}>
-      <div className={cn(
-        "flex h-5 w-5 items-center justify-center rounded-[5px] border-2 transition-all shrink-0",
-        checked ? "bg-primary border-primary" : "border-muted-foreground/30"
-      )}>
-        {checked && <CheckCircle className="h-3.5 w-3.5 text-white" />}
+    <div className="space-y-3">
+      <p className="text-sm text-center font-medium">{data.description}</p>
+      <div className="grid grid-cols-2 gap-2">
+        {data.options.map((opt: any) => (
+          <button key={opt.id} type="button" onClick={() => { setSelected(opt.id); onSubmit(opt.id.toString()); }}
+            disabled={status === "verifying"}
+            className={cn(
+              "flex items-center justify-center h-16 rounded-[10px] border-2 text-2xl transition-all",
+              "hover:bg-accent active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary/30",
+              selected === opt.id ? "border-primary bg-primary/10" : "border-border/50 bg-card"
+            )}
+          >{opt.emoji}</button>
+        ))}
       </div>
-      <input type="checkbox" className="sr-only" checked={checked}
-        onChange={(e) => {
-          setChecked(e.target.checked);
-          if (e.target.checked) onSubmit("confirmed");
-        }}
-      />
-      <span className="text-sm text-foreground/80 font-medium">{data.label}</span>
-      {status === "verifying" && <Loader2 className="h-4 w-4 animate-spin ml-auto shrink-0" />}
-    </label>
+      {error && <p className="text-xs text-destructive text-center">{error}</p>}
+    </div>
   );
 }
 
-/* ─── 2. Image Select (like hCaptcha image challenges) ─── */
+/* ─── 2. Image Select — "Select all X" ─── */
 
 function ImageSelect({ data, status, onSubmit, error, t }: any) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -212,7 +215,7 @@ function ImageSelect({ data, status, onSubmit, error, t }: any) {
   );
 }
 
-/* ─── 3. Puzzle Grid (odd one out) ─── */
+/* ─── 3. Puzzle Grid — "Find the odd one out" ─── */
 
 function PuzzleGrid({ data, status, onSubmit, error, t }: any) {
   const [selected, setSelected] = useState<number | null>(null);
@@ -243,31 +246,35 @@ function PuzzleGrid({ data, status, onSubmit, error, t }: any) {
   );
 }
 
-/* ─── 4. Math (text fallback) ─── */
+/* ─── 4. Find Missing — "What's missing?" ─── */
 
-function MathChallenge({ data, status, onSubmit, error, t }: any) {
-  const [answer, setAnswer] = useState("");
+function FindMissing({ data, status, onSubmit, error, t }: any) {
+  const [selected, setSelected] = useState<number | null>(null);
 
   return (
     <div className="space-y-3">
-      <div className="px-4 py-3.5 text-center bg-card rounded-[12px] border border-border/40">
-        <p className="text-base font-semibold">{data.question}</p>
+      <p className="text-sm text-center font-medium">{data.description}</p>
+      <div className="flex items-center justify-center gap-2 py-3">
+        {data.emojis.map((emoji: string, i: number) => (
+          <div key={i}
+            className="flex items-center justify-center h-12 w-12 rounded-[10px] border-2 border-border/50 bg-card text-xl"
+          >{emoji}</div>
+        ))}
+        <div className="flex items-center justify-center h-12 w-12 rounded-[10px] border-2 border-dashed border-muted-foreground/40 text-lg text-muted-foreground">?</div>
       </div>
-      <div className="flex items-center gap-2">
-        <input type="text" inputMode="numeric" placeholder={t("answerPlaceholder")}
-          value={answer} onChange={e => setAnswer(e.target.value)}
-          onKeyDown={e => { if (e.key === "Enter") onSubmit(answer); }}
-          disabled={status === "verifying"} autoComplete="off"
-          className="w-full h-10 rounded-[10px] border border-border/50 bg-background px-3 text-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
-        />
-        <button type="button" onClick={() => onSubmit(answer)}
-          disabled={!answer.trim() || status === "verifying"}
-          className="flex items-center gap-1.5 h-10 px-4 rounded-[10px] text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 shrink-0"
-        >
-          {status === "verifying" ? <Loader2 className="h-4 w-4 animate-spin" /> : t("verify")}
-        </button>
+      <div className="grid grid-cols-4 gap-2">
+        {data.options.map((opt: any) => (
+          <button key={opt.id} type="button" onClick={() => { setSelected(opt.id); onSubmit(opt.id.toString()); }}
+            disabled={status === "verifying"}
+            className={cn(
+              "flex items-center justify-center h-14 rounded-[10px] border-2 text-xl transition-all",
+              "hover:bg-accent active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary/30",
+              selected === opt.id ? "border-primary bg-primary/10" : "border-border/50 bg-card"
+            )}
+          >{opt.emoji}</button>
+        ))}
       </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-xs text-destructive text-center">{error}</p>}
     </div>
   );
 }

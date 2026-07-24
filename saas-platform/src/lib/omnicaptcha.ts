@@ -9,7 +9,7 @@ const SECRET: string = process.env.OMNICAPTCHA_SECRET || process.env.INSFORGE_AP
 
 const TOKEN_TTL_MS = 5 * 60 * 1000;
 
-export type ChallengeType = "checkbox" | "image-select" | "puzzle-grid" | "math";
+export type ChallengeType = "icon-match" | "image-select" | "puzzle-grid" | "find-missing";
 export type ChallengeLocale = "fr" | "en" | "sw";
 
 export interface CaptchaChallenge {
@@ -21,11 +21,14 @@ export interface CaptchaChallenge {
   locale: ChallengeLocale;
 }
 
-export type ChallengeData = CheckboxData | ImageSelectData | PuzzleGridData | MathData;
+export type ChallengeData = IconMatchData | ImageSelectData | PuzzleGridData | FindMissingData;
 
-export interface CheckboxData {
-  type: "checkbox";
-  label: string;
+export interface IconMatchData {
+  type: "icon-match";
+  emoji: string;
+  options: { id: number; emoji: string }[];
+  correctId: number;
+  description: string;
 }
 
 export interface ImageSelectData {
@@ -42,9 +45,12 @@ export interface PuzzleGridData {
   description: string;
 }
 
-export interface MathData {
-  type: "math";
-  question: string;
+export interface FindMissingData {
+  type: "find-missing";
+  emojis: string[];
+  options: { id: number; emoji: string }[];
+  correctId: number;
+  description: string;
 }
 
 export interface CaptchaVerifyResult {
@@ -52,7 +58,7 @@ export interface CaptchaVerifyResult {
   reason?: string;
 }
 
-let usedTokens = new Set<string>();
+const usedTokens = new Map<string, number>();
 const CLEANUP_MS = 10 * 60 * 1000;
 setInterval(() => { usedTokens.clear(); }, CLEANUP_MS);
 
@@ -82,7 +88,7 @@ function validSig(challengeId: string, answer: string, expiresAt: number, nonce:
   try { return timingSafeEqual(Buffer.from(sig, "hex"), Buffer.from(expected, "hex")); } catch { return false; }
 }
 
-const SHAPES = ["⬤", "■", "▲", "★", "◆", "⬟", "⬢"];
+const EMOJIS = ["🌍", "🚀", "⭐", "🌈", "🔥", "💎", "🎯", "🏆", "🌸", "🍀", "🦋", "🌺", "🍎", "🍀", "🎲", "🎨"];
 
 function pick<T>(arr: T[], n: number): T[] {
   const copy = [...arr];
@@ -104,36 +110,32 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-const L_FR: Record<string, string> = { "⬤": "cercle", "■": "carré", "▲": "triangle", "★": "étoile", "◆": "losange", "⬟": "pentagone", "⬢": "hexagone" };
-const L_EN: Record<string, string> = { "⬤": "circle", "■": "square", "▲": "triangle", "★": "star", "◆": "diamond", "⬟": "pentagon", "⬢": "hexagon" };
-const L_SW: Record<string, string> = { "⬤": "duara", "■": "mraba", "▲": "pembetatu", "★": "nyota", "◆": "almasi", "⬟": "pentagoni", "⬢": "heksagoni" };
+function generateIconMatch(locale: ChallengeLocale): { data: IconMatchData; answer: string } {
+  const target = pick(EMOJIS, 1)[0];
+  const others = pick(EMOJIS.filter(e => e !== target), 3);
+  const options = shuffle([target, ...others]).map((e, i) => ({ id: i + 1, emoji: e }));
+  const correct = options.find(o => o.emoji === target)!.id;
 
-function shapeLabel(s: string, l: ChallengeLocale): string {
-  const m = { fr: L_FR, en: L_EN, sw: L_SW }[l];
-  return m?.[s] || s;
-}
-
-function generateCheckbox(locale: ChallengeLocale): { data: CheckboxData; answer: string } {
   const labels: Record<ChallengeLocale, string> = {
-    fr: "Cochez pour confirmer que vous êtes humain",
-    en: "Check to confirm you are human",
-    sw: "Weka alama ili kuthibitisha wewe ni binadamu",
+    fr: `Appuyez sur ${target}`,
+    en: `Tap ${target}`,
+    sw: `Gusa ${target}`,
   };
-  return { data: { type: "checkbox", label: labels[locale] }, answer: "confirmed" };
+
+  return { data: { type: "icon-match", emoji: target, options, correctId: correct, description: labels[locale] }, answer: correct.toString() };
 }
 
 function generateImageSelect(locale: ChallengeLocale): { data: ImageSelectData; answer: string } {
-  const emojis = ["🌍", "🚀", "⭐", "🌈", "🔥", "💎", "🎯", "🏆", "🌸", "🍀", "🦋", "🌺"];
-  const chosen = pick(emojis, 6);
+  const chosen = pick(EMOJIS, 6);
   const grid = chosen.map((e, i) => ({ id: i + 1, emoji: e }));
   const targetCount = randomInt(2, 3);
   const targets = pick(grid, targetCount);
   const targetEmoji = targets[0].emoji;
 
   const labels: Record<ChallengeLocale, string> = {
-    fr: `Sélectionnez tous les éléments avec ${targetEmoji}`,
-    en: `Select all items with ${targetEmoji}`,
-    sw: `Chagua vitu vyote vilivyo na ${targetEmoji}`,
+    fr: `Sélectionnez tous les ${targetEmoji}`,
+    en: `Select all ${targetEmoji}`,
+    sw: `Chagua vyote ${targetEmoji}`,
   };
 
   return {
@@ -143,11 +145,10 @@ function generateImageSelect(locale: ChallengeLocale): { data: ImageSelectData; 
 }
 
 function generatePuzzleGrid(locale: ChallengeLocale): { data: PuzzleGridData; answer: string } {
-  const base = pick(SHAPES, 1)[0];
-  const diff = pick(SHAPES.filter(s => s !== base), 1)[0];
-  const pos = randomInt(0, 8);
+  const base = pick(EMOJIS, 1)[0];
+  const diff = pick(EMOJIS.filter(s => s !== base), 1)[0];
   const cells: { id: number; emoji: string }[] = [];
-  for (let i = 0; i < 9; i++) cells.push({ id: i + 1, emoji: i === pos ? diff : base });
+  for (let i = 0; i < 9; i++) cells.push({ id: i + 1, emoji: i === randomInt(0, 9) ? diff : base });
   const shuffled = shuffle(cells);
   const correct = shuffled.find(c => c.emoji === diff)!.id;
 
@@ -160,23 +161,26 @@ function generatePuzzleGrid(locale: ChallengeLocale): { data: PuzzleGridData; an
   return { data: { type: "puzzle-grid", grid: shuffled, correctId: correct, description: labels[locale] }, answer: correct.toString() };
 }
 
-function generateMath(locale: ChallengeLocale): { data: MathData; answer: string } {
-  const a = randomInt(10, 50);
-  const b = randomInt(1, 20);
-  const op = ["+", "-"][randomInt(0, 2)];
-  const ans = op === "+" ? a + b : a - b;
+function generateFindMissing(locale: ChallengeLocale): { data: FindMissingData; answer: string } {
+  const all = pick(EMOJIS, 5);
+  const missing = all[0];
+  const shown = shuffle(all.slice(1));
+  const otherOptions = pick(EMOJIS.filter(e => !all.includes(e)), 3);
+  const options = shuffle([missing, ...otherOptions]).map((e, i) => ({ id: i + 1, emoji: e }));
+  const correct = options.find(o => o.emoji === missing)!.id;
 
   const labels: Record<ChallengeLocale, string> = {
-    fr: `Combien font ${a} ${op} ${b} ?`,
-    en: `What is ${a} ${op} ${b} ?`,
-    sw: `${a} ${op} ${b} ni ngapi ?`,
+    fr: "Quel élément manque ?",
+    en: "What is missing?",
+    sw: "Nini kinakosekana?",
   };
 
-  return { data: { type: "math", question: labels[locale] }, answer: ans.toString() };
+  return { data: { type: "find-missing", emojis: shown, options, correctId: correct, description: labels[locale] }, answer: correct.toString() };
 }
 
 function randomType(): ChallengeType {
-  return (["checkbox", "image-select", "puzzle-grid", "math"] as ChallengeType[])[randomInt(0, 4)];
+  const types: ChallengeType[] = ["icon-match", "image-select", "puzzle-grid", "find-missing"];
+  return types[randomInt(0, types.length)];
 }
 
 export function generateChallenge(type?: ChallengeType, locale: ChallengeLocale = "fr"): CaptchaChallenge {
@@ -184,18 +188,15 @@ export function generateChallenge(type?: ChallengeType, locale: ChallengeLocale 
   const id = generateId();
   let result: { data: ChallengeData; answer: string };
   switch (t) {
-    case "checkbox": result = generateCheckbox(locale); break;
+    case "icon-match": result = generateIconMatch(locale); break;
     case "image-select": result = generateImageSelect(locale); break;
     case "puzzle-grid": result = generatePuzzleGrid(locale); break;
-    case "math": result = generateMath(locale); break;
-    default: result = generateCheckbox(locale);
+    case "find-missing": result = generateFindMissing(locale); break;
   }
 
-  let q = "";
-  if (result.data.type === "checkbox") q = result.data.label;
-  else if (result.data.type === "image-select") q = result.data.description;
-  else if (result.data.type === "puzzle-grid") q = result.data.description;
-  else if (result.data.type === "math") q = result.data.question;
+  const q = "question" in result.data
+    ? (result.data as any).question || (result.data as any).description || ""
+    : (result.data as any).description || "";
 
   return { id, type: t, question: q, data: result.data, token: createToken(id, result.answer), locale };
 }
@@ -207,11 +208,17 @@ export function verifyChallenge(token: string, userAnswer: string): CaptchaVerif
   if (usedTokens.has(token)) return { valid: false, reason: "Token already used" };
   if (!validSig(p.challengeId, p.answer, p.expiresAt, p.nonce, p.sig)) return { valid: false, reason: "Invalid signature" };
   if (userAnswer.trim().toLowerCase() !== p.answer.trim().toLowerCase()) return { valid: false, reason: "Incorrect" };
-  usedTokens.add(token);
+  usedTokens.set(token, Date.now());
   return { valid: true };
 }
 
 export function isTokenUsed(token: string): boolean { return usedTokens.has(token); }
+
+export function isTokenRecentlyUsed(token: string, maxAgeMs: number = TOKEN_TTL_MS): boolean {
+  const ts = usedTokens.get(token);
+  if (!ts) return false;
+  return (Date.now() - ts) < maxAgeMs;
+}
 
 export class MemoryRateLimiter {
   private store = new Map<string, { count: number; resetAt: number }>();
