@@ -12,21 +12,31 @@ export async function GET() {
     }
 
     // Fetch full user profile
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("users")
       .select("*")
       .eq("id", user.id)
       .single();
+
+    if (profileError) {
+      console.error("Session profile fetch error");
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
 
     if (!profile) {
       return NextResponse.json({ user: null }, { status: 401 });
     }
 
     // Fetch organization memberships
-    const { data: memberships } = await supabase
+    const { data: memberships, error: membershipsError } = await supabase
       .from("organization_members")
       .select("organization_id, role, is_owner, organizations:organization_id(id, name, slug, logo_url, tier)")
       .eq("user_id", user.id);
+
+    if (membershipsError) {
+      console.error("Session memberships fetch error");
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
 
     const activeWorkspace = await getActiveWorkspace();
 
@@ -71,6 +81,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Session fetch error");
-    return NextResponse.json({ user: null }, { status: 401 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

@@ -43,30 +43,32 @@ export async function getActiveWorkspace() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
+    // Single query: workspace with membership check via organization_id + user_id
     const { data: workspace } = await supabase
       .from("workspaces")
-      .select("*")
+      .select("*, organization_members!inner(id, role, is_owner)")
       .eq("id", activeWorkspaceId)
+      .eq("organization_members.user_id", user.id)
       .single();
 
     if (!workspace || !workspace.is_active) return null;
 
-    // Verify membership
-    const { data: membership } = await supabase
-      .from("organization_members")
-      .select("id")
-      .eq("organization_id", workspace.organization_id)
-      .eq("user_id", user.id)
-      .single();
+    // Run membership check and SUPER_ADMIN role check in parallel
+    const [membershipResult, profileResult] = await Promise.all([
+      supabase
+        .from("organization_members")
+        .select("id")
+        .eq("organization_id", workspace.organization_id)
+        .eq("user_id", user.id)
+        .single(),
+      supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single(),
+    ]);
 
-    // Check if user is SUPER_ADMIN (by querying their role)
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (!membership && profile?.role !== "SUPER_ADMIN") return null;
+    if (!membershipResult.data && profileResult.data?.role !== "SUPER_ADMIN") return null;
 
     // Transform to camelCase for compatibility
     return {

@@ -81,35 +81,17 @@ export function AIChat({
           }),
         });
 
-        if (!res.ok) throw new Error("API request failed");
+        if (!res.ok) {
+          throw new Error("API request failed");
+        }
 
-        const reader = res.body?.getReader();
-        if (!reader) throw new Error("No response body");
-
+        const data = await res.json();
         const assistantMessage: Message = {
           id: `assistant-${Date.now()}`,
           role: "assistant",
-          content: "",
+          content: data.content || "",
         };
         setMessages((prev) => [...prev, assistantMessage]);
-
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          setMessages((prev) => {
-            const updated = [...prev];
-            const last = updated[updated.length - 1];
-            if (last.role === "assistant") {
-              updated[updated.length - 1] = {
-                ...last,
-                content: last.content + chunk,
-              };
-            }
-            return updated;
-          });
-        }
       } catch (error) {
         setMessages((prev) => [
           ...prev,

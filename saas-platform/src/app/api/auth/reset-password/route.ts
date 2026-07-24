@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
 import { validateCSRFRequest } from "@/lib/csrf";
 
 export async function POST(request: Request) {
@@ -7,6 +8,17 @@ export async function POST(request: Request) {
     if (!validateCSRFRequest(request)) {
       return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
     }
+
+    const clientId = getClientIdentifier(request);
+    const rateLimit = await checkRateLimit("reset-password", clientId);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Trop de tentatives" },
+        { status: 429 }
+      );
+    }
+
     const { password } = await request.json();
 
     if (!password) {

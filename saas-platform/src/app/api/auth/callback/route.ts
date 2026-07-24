@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAdminClient } from "@insforge/sdk";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -28,7 +29,14 @@ export async function GET(request: Request) {
           .single();
 
         if (!existingUser) {
-          const { error: insertError } = await supabase.from("users").insert({
+          const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL || "";
+          const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY || "";
+          const admin = createAdminClient({
+            baseUrl: INSFORGE_URL,
+            apiKey: INSFORGE_API_KEY,
+          });
+
+          const { error: insertError } = await admin.database.from("users").insert([{
             id: data.user.id,
             email: data.user.email || "",
             first_name: data.user.user_metadata?.full_name?.split(" ")[0] || data.user.user_metadata?.name || "",
@@ -37,7 +45,7 @@ export async function GET(request: Request) {
             role: "EMPLOYEE",
             language: "fr",
             timezone: "Europe/Paris",
-          });
+          }]);
 
           if (insertError) {
             console.error("Failed to create user profile from OAuth");

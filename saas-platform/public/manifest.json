@@ -1,7 +1,7 @@
 {
   "name": "OmniCore - ERP Intelligent",
   "short_name": "OmniCore",
-  "description": "Plateforme ERP cloud moderne pour la gestion d'entreprise",
+  "description": "Plateforme ERP cloud moderne pour la gestion d'entreprise basée à Kalemie, Tanganyika, RDC",
   "start_url": "/fr",
   "display": "standalone",
   "background_color": "#F8FAFC",
@@ -17,9 +17,15 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/favicon.svg",
-      "sizes": "48x48",
-      "type": "image/svg+xml",
+      "src": "/omnicore-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/omnicore-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],

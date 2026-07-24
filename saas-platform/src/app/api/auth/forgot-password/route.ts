@@ -26,9 +26,12 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
+    const locale = request.url
+      ? new URL(request.url).pathname.split("/")[1] || "fr"
+      : "fr";
     const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://omnicore.cd";
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/fr/reset-password`,
+      redirectTo: `${origin}/${locale}/reset-password`,
     });
 
     if (error) {

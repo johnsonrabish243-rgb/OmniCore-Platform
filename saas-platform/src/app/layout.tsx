@@ -33,8 +33,10 @@ export const metadata: Metadata = {
       "Plateforme SaaS d'entreprise pour les organisations modernes.",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/omnicore-logo.png", sizes: "120x120", type: "image/png" }],
   },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

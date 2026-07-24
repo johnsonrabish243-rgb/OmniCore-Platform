@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  
+
   <!-- Landing Pages -->
   <url>
     <loc>https://omnicore.cd/fr</loc>
@@ -11,7 +11,6 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
-  
   <url>
     <loc>https://omnicore.cd/en</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://omnicore.cd/fr" />
@@ -20,7 +19,6 @@
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
-
   <url>
     <loc>https://omnicore.cd/sw</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://omnicore.cd/fr" />
@@ -30,16 +28,43 @@
     <priority>0.9</priority>
   </url>
 
+  <!-- Marketing Pages (all locales) -->
+  <url><loc>https://omnicore.cd/fr/features</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://omnicore.cd/en/features</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://omnicore.cd/sw/features</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+
+  <url><loc>https://omnicore.cd/fr/pricing</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://omnicore.cd/en/pricing</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://omnicore.cd/sw/pricing</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+
+  <url><loc>https://omnicore.cd/fr/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://omnicore.cd/en/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://omnicore.cd/sw/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+
+  <url><loc>https://omnicore.cd/fr/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://omnicore.cd/en/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://omnicore.cd/sw/contact</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+
   <!-- Auth Pages -->
-  <url>
-    <loc>https://omnicore.cd/fr/login</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://omnicore.cd/fr/signup</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
+  <url><loc>https://omnicore.cd/fr/login</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://omnicore.cd/en/login</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://omnicore.cd/sw/login</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+
+  <url><loc>https://omnicore.cd/fr/signup</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://omnicore.cd/en/signup</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://omnicore.cd/sw/signup</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+
+  <!-- Legal Pages -->
+  <url><loc>https://omnicore.cd/fr/privacy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://omnicore.cd/en/privacy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://omnicore.cd/sw/privacy</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+
+  <url><loc>https://omnicore.cd/fr/terms</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://omnicore.cd/en/terms</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://omnicore.cd/sw/terms</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+
+  <url><loc>https://omnicore.cd/fr/cookies</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://omnicore.cd/en/cookies</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://omnicore.cd/sw/cookies</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
 
 </urlset>

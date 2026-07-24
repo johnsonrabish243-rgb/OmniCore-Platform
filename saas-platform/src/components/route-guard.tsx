@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, ReactNode } from "react";
+import { useEffect, useState, useRef, ReactNode } from "react";
 import { useRouter } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,9 +39,14 @@ export function RouteGuard({ moduleId, children, fallback = "block" }: RouteGuar
   const router = useRouter();
   const t = useTranslations("routeGuard");
   const [status, setStatus] = useState<"loading" | "allowed" | "blocked">("loading");
+  const lastFetch = useRef(0);
 
   useEffect(() => {
     async function check() {
+      const now = Date.now();
+      if (now - lastFetch.current < 5000) return;
+      lastFetch.current = now;
+
       try {
         const res = await fetch("/api/auth/session");
         if (res.ok) {

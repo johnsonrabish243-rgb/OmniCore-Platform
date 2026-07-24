@@ -25,8 +25,8 @@ export async function POST() {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     console.error("Logout error");
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
