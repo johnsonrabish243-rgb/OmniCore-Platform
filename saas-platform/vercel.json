@@ -1,6 +1,5 @@
 {
   "framework": "nextjs",
-  "rootDirectory": ".",
   "headers": [
     {
       "source": "/(.*)",
