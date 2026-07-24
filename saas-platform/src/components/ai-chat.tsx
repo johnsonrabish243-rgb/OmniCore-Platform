@@ -15,14 +15,29 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
+const CSRF_HEADERS = { "X-Requested-With": "XMLHttpRequest", "Content-Type": "application/json" };
+
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
 }
 
+interface UserInfo {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
 interface AIChatProps {
   position?: "bottom-right" | "bottom-left";
+}
+
+function getGreeting(firstName?: string): string {
+  if (firstName) {
+    return `Bonjour ${firstName} ! 👋 Je suis OmniCore AI, votre assistant intelligent. Comment puis-je vous aider aujourd'hui ?`;
+  }
+  return `Bonjour ! 👋 Je suis OmniCore AI, votre assistant intelligent. Comment puis-je vous aider aujourd'hui ?`;
 }
 
 export function AIChat({
@@ -31,11 +46,12 @@ export function AIChat({
   const t = useTranslations("ai");
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: t("welcomeMessage"),
+      content: "",
     },
   ]);
   const [input, setInput] = useState("");
@@ -43,6 +59,34 @@ export function AIChat({
   const [rateLimited, setRateLimited] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/session", { headers: CSRF_HEADERS })
+      .then(r => r.json().catch(() => ({})))
+      .then(data => {
+        if (data?.user) {
+          setUserInfo(data.user);
+          setMessages([{
+            id: "welcome",
+            role: "assistant",
+            content: getGreeting(data.user.firstName),
+          }]);
+        } else {
+          setMessages([{
+            id: "welcome",
+            role: "assistant",
+            content: t("welcomeMessage"),
+          }]);
+        }
+      })
+      .catch(() => {
+        setMessages([{
+          id: "welcome",
+          role: "assistant",
+          content: t("welcomeMessage"),
+        }]);
+      });
+  }, []);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -74,7 +118,7 @@ export function AIChat({
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: CSRF_HEADERS,
           body: JSON.stringify({
             messages: [...messages, userMessage].map(({ role, content }) => ({
               role,
@@ -157,10 +201,12 @@ export function AIChat({
         )}
         style={{
           background: "linear-gradient(135deg, #2563EB, #7C3AED)",
+          boxShadow: "0 0 20px rgba(37,99,235,0.3), 0 0 40px rgba(124,58,237,0.15)",
         }}
       >
-        <Bot className="h-6 w-6 text-white group-hover:animate-pulse" />
-        <span className="absolute -top-1 -right-1 flex h-4 w-4">
+        <span className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: "linear-gradient(135deg, #2563EB, #7C3AED)" }} />
+        <Bot className="h-6 w-6 text-white relative z-10 group-hover:animate-pulse" />
+        <span className="absolute -top-1 -right-1 flex h-4 w-4 z-10">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
           <span className="relative inline-flex h-4 w-4 rounded-full bg-emerald-500" />
         </span>

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-helpers";
 import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
+import { validateCSRFRequest } from "@/lib/csrf";
+
+const MAX_MESSAGE_LENGTH = 2000;
+const ALLOWED_ORIGINS = ["https://omnicore.site", "http://localhost:3000"];
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +102,13 @@ const NORM_MAP: Record<string, string> = {
   "finance": "finance", "finances": "finance", "financial": "finance", "fedha": "finance", "financier": "finance",
   "commerce": "commerce", "ecommerce": "commerce", "biashara": "commerce", "boutique": "commerce", "shop": "commerce",
 };
+
+function sanitizeInput(text: string): string {
+  return text
+    .replace(/<[^>]*>/g, "")
+    .replace(/[<>]/g, "")
+    .trim();
+}
 
 function normWords(text: string): string[] {
   const n = normalize(text);
@@ -330,10 +341,45 @@ function scoreTopics(text: string): { key: string; score: number }[] {
   return results.sort((a, b) => b.score - a.score);
 }
 
+function detectFrustration(text: string): "frustrated" | "sad" | "angry" | null {
+  const n = normalize(text);
+  const frustratedWords = ["frustre", "frustrated", "enerve", "enerve", "agace", "saoul", "sature", "lass", "fatigue", "marre", "raslebol", "ras le bol", "pulse", "exaspere", "exasperer"];
+  const sadWords = ["triste", "sad", "decourage", "decu", "deception", "peur", "inquiet", "stress", "stresse", "deprime"];
+  const angryWords = ["colere", "en colere", "angry", "fache", "furieux", "rage", "nerve", "craque", "crise", "insulte", "pute", "merde", "connard", "imbecile", "imbécile"];
+
+  for (const w of frustratedWords) { if (n.includes(w)) return "frustrated"; }
+  for (const w of sadWords) { if (n.includes(w)) return "sad"; }
+  for (const w of angryWords) { if (n.includes(w)) return "angry"; }
+  return null;
+}
+
+const emotionalResponses: Record<string, ResponseMap> = {
+  frustrated: {
+    fr: "Je comprends votre frustration, et je suis là pour vous aider à résoudre ce problème rapidement. Dites-moi ce qui ne va pas et je ferai de mon mieux pour vous trouver une solution.",
+    en: "I understand your frustration, and I'm here to help you resolve this quickly. Tell me what's wrong and I'll do my best to find a solution.",
+    sw: "Naelewa kuchoka kwako, na niko hapa kukusaidia kutatua tatizo hili haraka. Niambie tatizo lako na nitafanya bidii kupata suluhisho.",
+  },
+  sad: {
+    fr: "Je suis désolé que vous ressentiez cela. N'hésitez pas à me parler de ce qui ne va pas, je suis là pour vous écouter et vous aider.",
+    en: "I'm sorry you're feeling this way. Please feel free to tell me what's wrong, I'm here to listen and help.",
+    sw: "Samahani kwamba unahisi hivi. Tafadhali niambie tatizo lako, niko hapa kukusikiliza na kukusaidia.",
+  },
+  angry: {
+    fr: "Je comprends que vous soyez énervé. Je vais faire tout mon possible pour résoudre votre problème. Expliquez-moi ce qui s'est passé, je vous écoute.",
+    en: "I understand you're upset. I'll do everything I can to resolve your issue. Tell me what happened, I'm listening.",
+    sw: "Naelewa kuwa umekasirika. Nitafanya kila niwezalo kutatua tatizo lako. Niambie kilichotokea, ninasikiliza.",
+  },
+};
+
 function getResponse(message: string, lang: "fr" | "en" | "sw", previousMessages: string[]): string {
   const lower = message.toLowerCase();
   const n = normalize(lower);
   const prevContext = previousMessages.join(" ").toLowerCase();
+
+  const emotion = detectFrustration(message);
+  if (emotion) {
+    return emotionalResponses[emotion][lang];
+  }
 
   if (/\b(bonjour|salut|coucou|hello|hi|hey|habari|jambo|hujambo|salam|salamu|bjr|slt)\b/.test(lower)) {
     return responses.greeting[lang];
@@ -417,6 +463,20 @@ function getResponse(message: string, lang: "fr" | "en" | "sw", previousMessages
 
 export async function POST(req: Request) {
   try {
+    if (!validateCSRFRequest(req)) {
+      return NextResponse.json({ error: "Requête non autorisée" }, { status: 403 });
+    }
+
+    const contentType = req.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      return NextResponse.json({ error: "Type de contenu invalide" }, { status: 415 });
+    }
+
+    const origin = req.headers.get("origin") || req.headers.get("referer") || "";
+    if (origin && !ALLOWED_ORIGINS.some(o => origin.startsWith(o))) {
+      return NextResponse.json({ error: "Origine non autorisée" }, { status: 403 });
+    }
+
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Veuillez vous connecter pour utiliser l'assistant OmniCore AI." }, { status: 401 });
@@ -439,19 +499,40 @@ export async function POST(req: Request) {
       );
     }
 
-    const { messages } = await req.json();
+    const body = await req.json();
+    const { messages } = body;
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "Messages requis" }, { status: 400 });
     }
 
-    const allUserMessages = messages.filter((m: { role: string }) => m.role === "user").slice(-3).map((m: { content: string }) => m.content);
+    const sanitizedMessages = messages.map((m: { role: string; content: string }) => ({
+      role: m.role,
+      content: sanitizeInput(m.content).substring(0, MAX_MESSAGE_LENGTH),
+    }));
+
+    for (const msg of sanitizedMessages) {
+      if (msg.content.length === 0) {
+        return NextResponse.json({ error: "Message invalide" }, { status: 400 });
+      }
+    }
+
+    const scriptPattern = /[\u0000-\u001F]|[\u007F-\u009F]|\\u00[0-9a-fA-F]{2}|javascript:|data:|vbscript:/i;
+    for (const msg of sanitizedMessages) {
+      if (scriptPattern.test(msg.content)) {
+        return NextResponse.json({ error: "Message invalide" }, { status: 400 });
+      }
+    }
+
+    const allUserMessages = sanitizedMessages.filter((m: { role: string }) => m.role === "user").slice(-3).map((m: { content: string }) => m.content);
     const lastUserMessage = allUserMessages[allUserMessages.length - 1] || "";
     const previousMessages = allUserMessages.slice(0, -1);
 
     const lang = detectLanguage(lastUserMessage);
     const response = getResponse(lastUserMessage, lang, previousMessages);
 
-    return NextResponse.json({ role: "assistant", content: response, language: lang });
+    const safeResponse = response.replace(/javascript:|data:|<script|<\/script>/gi, "");
+
+    return NextResponse.json({ role: "assistant", content: safeResponse, language: lang });
   } catch (error) {
     console.error("AI Chat error");
     return NextResponse.json({ error: "Erreur lors du traitement de la demande." }, { status: 500 });
