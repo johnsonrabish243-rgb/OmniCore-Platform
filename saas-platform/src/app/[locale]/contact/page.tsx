@@ -352,7 +352,7 @@ function ContactForm() {
 /* ───── Contact Info Sidebar ───── */
 function ContactInfo() {
   const items = [
-    { icon: Mail, label: "Email", value: "contact@omnicore.cd", color: "from-blue-500 to-blue-600" },
+    { icon: Mail, label: "Email", value: "contact@omnicore.site", color: "from-blue-500 to-blue-600" },
     { icon: Phone, label: "Téléphone", value: "+243 XX XXX XXXX", color: "from-emerald-500 to-emerald-600" },
     { icon: MapPin, label: "Adresse", value: "Kalemie, Tanganyika, RDC", color: "from-rose-500 to-rose-600" },
     { icon: Clock, label: "Horaires", value: "Lun - Ven, 8h00 - 17h00", color: "from-amber-500 to-amber-600" },

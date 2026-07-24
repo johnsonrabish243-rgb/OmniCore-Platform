@@ -339,7 +339,7 @@ function Location() {
                   </div>
                   <div>
                     <p className="font-medium text-sm">Email</p>
-                    <p className="text-xs text-muted-foreground">contact@omnicore.cd</p>
+                    <p className="text-xs text-muted-foreground">contact@omnicore.site</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-4 rounded-[12px] bg-card border border-border/40">

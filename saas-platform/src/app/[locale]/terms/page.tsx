@@ -87,7 +87,7 @@ const sections = [
   { icon: Gavel, title: "5. Propriété intellectuelle", content: "Tous les contenus, marques, logiciels et données de la plateforme OmniCore sont la propriété exclusive d'OmniCore et sont protégés par les lois internationales sur la propriété intellectuelle. Vous ne pouvez pas copier, modifier ou distribuer notre propriété intellectuelle." },
   { icon: Scale, title: "6. Limitation de responsabilité", content: "En aucun cas, OmniCore ne sera responsable des dommages indirects, spéciaux, consécutifs ou punitifs résultant de l'utilisation de la plateforme. Notre responsabilité totale ne dépassera pas le montant payé par vous au cours des 12 derniers mois." },
   { icon: FileText, title: "7. Modification des conditions", content: "OmniCore se réserve le droit de modifier ces conditions à tout moment. Les modifications prendront effet dès leur publication sur la plateforme. Il est de votre responsabilité de consulter régulièrement ces conditions." },
-  { icon: Mail, title: "8. Contact", content: "Pour toute question concernant ces conditions d'utilisation, contactez-nous à : legal@omnicore.cd ou par courrier à OmniCore, Kalemie, Tanganyika, RDC." },
+  { icon: Mail, title: "8. Contact", content: "Pour toute question concernant ces conditions d'utilisation, contactez-nous à : legal@omnicore.site ou par courrier à OmniCore, Kalemie, Tanganyika, RDC." },
 ];
 
 export default function TermsPage() {

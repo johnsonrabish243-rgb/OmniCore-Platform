@@ -1,5 +1,5 @@
 # robots.txt for OmniCore ERP
-# https://omnicore.cd
+# https://omnicore.site
 
 User-agent: *
 Allow: /
@@ -10,7 +10,7 @@ Disallow: /en/admin/
 Disallow: /sw/admin/
 
 # Sitemap
-Sitemap: https://omnicore.cd/sitemap.xml
+Sitemap: https://omnicore.site/sitemap.xml
 
 # Crawl delay
 Crawl-delay: 10

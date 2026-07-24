@@ -112,7 +112,7 @@ export async function POST(request: Request) {
     }
 
     // Send notification email to admin
-    const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_FROM || "contact@omnicore.cd";
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_FROM || "contact@omnicore.site";
     const emailBody = buildAdminEmailBody(body);
 
     // Try to send email via SMTP or Resend if configured
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
             Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: process.env.SMTP_FROM || "OmniCore <noreply@omnicore.cd>",
+            from: process.env.SMTP_FROM || "OmniCore <noreply@omnicore.site>",
             to: [adminEmail],
             subject: `[OmniCore] Nouvelle demande de rendez-vous de ${body.fullName}`,
             text: emailBody,

@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       type: "website",
       locale: locale === "fr" ? "fr_FR" : locale === "sw" ? "sw_KE" : "en_US",
       siteName: "OmniCore",
-      url: `https://omnicore.cd/${locale}`,
+      url: `https://omnicore.site/${locale}`,
       images: [
         {
           url: "/omnicore-logo.png",
@@ -66,11 +66,11 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       images: ["/omnicore-logo.png"],
     },
     alternates: {
-      canonical: `https://omnicore.cd/${locale}`,
+      canonical: `https://omnicore.site/${locale}`,
       languages: {
-        fr: "https://omnicore.cd/fr",
-        en: "https://omnicore.cd/en",
-        sw: "https://omnicore.cd/sw",
+        fr: "https://omnicore.site/fr",
+        en: "https://omnicore.site/en",
+        sw: "https://omnicore.site/sw",
       },
     },
   };

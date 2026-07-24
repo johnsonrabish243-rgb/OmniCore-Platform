@@ -213,7 +213,7 @@ export default function CookiesPage() {
                 <span className="font-semibold text-sm">Contact</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Pour toute question concernant notre politique de cookies, contactez-nous à : privacy@omnicore.cd
+                Pour toute question concernant notre politique de cookies, contactez-nous à : privacy@omnicore.site
               </p>
             </div>
           </ScrollReveal>

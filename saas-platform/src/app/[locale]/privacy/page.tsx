@@ -89,7 +89,7 @@ const sections = [
   { icon: Globe, title: "4. Partage des données", content: "Nous ne vendons pas vos données personnelles. Nous pouvons partager vos informations uniquement avec des prestataires de services tiers qui nous aident à exploiter notre plateforme, et uniquement dans la mesure nécessaire." },
   { icon: Shield, title: "5. Vos droits", content: "Conformément au RGPD, vous disposez des droits suivants : droit d'accès, droit de rectification, droit à l'effacement, droit à la portabilité des données, et droit d'opposition au traitement. Contactez-nous pour exercer ces droits." },
   { icon: Database, title: "6. Conservation des données", content: "Nous conservons vos données personnelles aussi longtemps que votre compte est actif, ou dans la mesure nécessaire pour fournir nos services. Après la suppression de votre compte, certaines données peuvent être conservées conformément à nos obligations légales." },
-  { icon: Mail, title: "7. Contact", content: "Pour toute question relative à cette politique de confidentialité ou pour exercer vos droits, contactez-nous à : privacy@omnicore.cd ou par courrier à OmniCore, Kalemie, Tanganyika, RDC." },
+  { icon: Mail, title: "7. Contact", content: "Pour toute question relative à cette politique de confidentialité ou pour exercer vos droits, contactez-nous à : privacy@omnicore.site ou par courrier à OmniCore, Kalemie, Tanganyika, RDC." },
 ];
 
 export default function PrivacyPage() {
