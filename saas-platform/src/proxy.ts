@@ -167,10 +167,11 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
   }
 
-  // Marketing pages: always accessible (no redirect for auth users)
+  // Marketing pages: always accessible (no redirect for auth users), cache for fast delivery
   if (isMarketing(pathname)) {
     const response = await intlMiddleware(request);
     response.headers.set("x-pathname", pathname);
+    response.headers.set("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400");
     return response;
   }
 

@@ -8,6 +8,10 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { headers } from "next/headers";
 
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
+
 // Auth pages that should NOT show the sidebar/AppShell
 const AUTH_PATHS = [
   "/login",
