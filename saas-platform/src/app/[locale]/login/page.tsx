@@ -60,7 +60,8 @@ export default function LoginPage() {
         return;
       }
 
-      window.location.href = `/${locale}/dashboard`;
+      const mod = data.preferredModule || "dashboard";
+      window.location.href = `/${locale}/${mod}`;
     } catch (err) {
       console.error("Login error:", err);
       setError(t("loginError"));

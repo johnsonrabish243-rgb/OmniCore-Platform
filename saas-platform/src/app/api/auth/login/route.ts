@@ -88,7 +88,10 @@ export async function POST(request: Request) {
       method: "password",
     });
 
-    // Set active workspace if exactly one workspace is available
+    // Determine preferred module for redirect
+    let preferredModule = user.preferred_module || null;
+
+    // Set active workspace cookie
     const cookieStore = await cookies();
     const { data: memberships } = await supabase
       .from("organization_members")
@@ -111,8 +114,20 @@ export async function POST(request: Request) {
           maxAge: 30 * 24 * 60 * 60,
           path: "/",
         });
+
+        // Derive module from workspace settings if user has no preferred_module
+        if (!preferredModule && workspaces[0].settings) {
+          const settings = typeof workspaces[0].settings === "string"
+            ? JSON.parse(workspaces[0].settings)
+            : workspaces[0].settings;
+          const mods = settings?.enabledModules;
+          if (mods && mods.length === 1) preferredModule = mods[0];
+        }
       }
     }
+
+    // Super admin falls back to dashboard
+    if (user.role === "SUPER_ADMIN") preferredModule = null;
 
     return NextResponse.json({
       user: {
@@ -123,6 +138,7 @@ export async function POST(request: Request) {
         role: user.role,
         avatarUrl: user.avatar_url,
       },
+      preferredModule,
     });
   } catch (error) {
     console.error("Login error");

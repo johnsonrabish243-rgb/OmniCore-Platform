@@ -6,12 +6,16 @@ import { validateCSRFRequest } from "@/lib/csrf";
 import { generateVerificationToken } from "@/lib/verification-token";
 import { sendVerificationEmail } from "@/lib/email-service";
 
-
 const INSFORGE_URL = process.env.NEXT_PUBLIC_INSFORGE_URL || "";
 const INSFORGE_API_KEY = process.env.INSFORGE_API_KEY || "";
 
 const VALID_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ALLOWED_LOCALES = ["fr", "en", "sw"];
+const VALID_MODULES = [
+  "hr", "finance", "crm", "commerce", "sales", "inventory",
+  "pharmacy", "education", "healthcare", "projects", "tasks",
+  "calendar", "messages", "documents",
+];
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { email, password, firstName, lastName, companyName, locale } = body;
+    const { email, password, firstName, lastName, companyName, locale, selectedModule } = body;
 
     if (!email || !password || !firstName || !lastName) {
       return NextResponse.json({ error: "Veuillez remplir tous les champs obligatoires." }, { status: 400 });
@@ -64,6 +68,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Vous devez accepter les conditions d'utilisation." }, { status: 400 });
     }
 
+    if (!selectedModule || !VALID_MODULES.includes(selectedModule)) {
+      return NextResponse.json({ error: "Veuillez sélectionner un module valide." }, { status: 400 });
+    }
+
     const userLocale = ALLOWED_LOCALES.includes(locale) ? locale : "fr";
 
     const admin = createAdminClient({ baseUrl: INSFORGE_URL, apiKey: INSFORGE_API_KEY });
@@ -73,10 +81,7 @@ export async function POST(request: Request) {
       email,
       password,
       options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-        },
+        data: { first_name: firstName, last_name: lastName },
       },
     });
 
@@ -94,6 +99,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Erreur lors de la création du compte." }, { status: 500 });
     }
 
+    const company = companyName?.trim() || `${firstName} ${lastName}`;
+
     const { error: profileError } = await admin.database.from("users").insert([{
       id: userId,
       email: email.toLowerCase().trim(),
@@ -103,6 +110,7 @@ export async function POST(request: Request) {
       language: userLocale,
       is_active: false,
       email_confirmed_at: null,
+      preferred_module: selectedModule,
     }]);
 
     if (profileError) {
@@ -138,68 +146,75 @@ export async function POST(request: Request) {
     });
 
     let orgId: string | null = null;
+    let workspaceSlug: string | null = null;
 
-    if (companyName) {
-      try {
-        const slug = companyName
+    try {
+      const slug = company
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || `org-${userId.slice(0, 8)}`;
+
+      const { data: org, error: orgError } = await admin.database
+        .from("organizations")
+        .insert([{ name: company, slug }])
+        .select()
+        .single();
+
+      if (org) {
+        orgId = org.id;
+
+        await admin.database.from("organization_members").insert([{
+          organization_id: org.id,
+          user_id: userId,
+          role: "OWNER",
+          is_owner: true,
+        }]);
+
+        const wsSlug = `${company}-${selectedModule}`
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "") || `org-${userId.slice(0, 8)}`;
+          .replace(/^-|-$/g, "") || `ws-${userId.slice(0, 8)}`;
 
-        const { data: org, error: orgError } = await admin.database
-          .from("organizations")
-          .insert([{ name: companyName.trim(), slug }])
+        const { data: ws, error: wsError } = await admin.database
+          .from("workspaces")
+          .insert([{
+            organization_id: org.id,
+            name: `${company} - ${selectedModule}`,
+            slug: wsSlug,
+            settings: JSON.stringify({
+              enabledModules: [selectedModule],
+              preferredModule: selectedModule,
+              currency: "USD",
+              language: userLocale,
+              timezone: "Africa/Lubumbashi",
+              industry: "",
+              createdBy: userId,
+            }),
+            is_active: true,
+          }])
           .select()
           .single();
 
-        if (org) {
-          orgId = org.id;
-
-          await admin.database.from("organization_members").insert([{
-            organization_id: org.id,
+        if (ws) {
+          workspaceSlug = ws.slug;
+          await admin.database.from("workspace_members").insert([{
+            workspace_id: ws.id,
             user_id: userId,
             role: "OWNER",
-            is_owner: true,
           }]);
-
-          const wsSlug = (companyName + "-workspace")
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, "") || `ws-${userId.slice(0, 8)}`;
-
-          const { data: ws, error: wsError } = await admin.database
-            .from("workspaces")
-            .insert([{
-              organization_id: org.id,
-              name: `${companyName} - Espace principal`,
-              slug: wsSlug,
-              settings: JSON.stringify({
-                enabledModules: ["hr", "finance", "crm", "commerce", "sales", "inventory", "pharmacy", "education", "healthcare", "projects", "tasks", "calendar", "messages", "documents"],
-              }),
-              is_active: true,
-            }])
-            .select()
-            .single();
-
-          if (ws) {
-            await admin.database.from("workspace_members").insert([{
-              workspace_id: ws.id,
-              user_id: userId,
-              role: "OWNER",
-            }]);
-          }
-          if (wsError) console.error("Workspace creation error:", wsError.message);
         }
-        if (orgError) console.error("Organization creation error:", orgError.message);
-      } catch (orgErr) {
-        console.error("Org/workspace setup error:", String(orgErr));
+        if (wsError) console.error("Workspace creation error:", wsError.message);
       }
+      if (orgError) console.error("Organization creation error:", orgError.message);
+    } catch (orgErr) {
+      console.error("Org/workspace setup error:", String(orgErr));
     }
 
     return NextResponse.json({
       success: true,
       verificationRequired: true,
       emailSent,
+      preferredModule: selectedModule,
       user: { id: userId, email, firstName, lastName },
       organization: orgId ? { id: orgId } : null,
       redirectTo: `/${userLocale}/verify-email?token=${vt.token}&userId=${userId}`,

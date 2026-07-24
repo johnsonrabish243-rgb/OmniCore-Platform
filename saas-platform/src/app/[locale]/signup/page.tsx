@@ -8,18 +8,33 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
-
 import {
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  User,
-  Building2,
+  Mail, Lock, Eye, EyeOff, User, Building2,
+  Briefcase, Users, ShoppingBag, ShoppingCart, Package,
+  Pill, GraduationCap, Heart, FolderKanban, CheckSquare,
+  Calendar, MessageSquare, FileText, DollarSign, ArrowRight, ArrowLeft, CheckCircle
 } from "lucide-react";
+
+const MODULES = [
+  { id: "hr", icon: Users, color: "text-pink-500" },
+  { id: "finance", icon: DollarSign, color: "text-emerald-500" },
+  { id: "crm", icon: Briefcase, color: "text-blue-500" },
+  { id: "commerce", icon: ShoppingBag, color: "text-orange-500" },
+  { id: "sales", icon: ShoppingCart, color: "text-violet-500" },
+  { id: "inventory", icon: Package, color: "text-amber-500" },
+  { id: "pharmacy", icon: Pill, color: "text-red-500" },
+  { id: "education", icon: GraduationCap, color: "text-sky-500" },
+  { id: "healthcare", icon: Heart, color: "text-rose-500" },
+  { id: "projects", icon: FolderKanban, color: "text-indigo-500" },
+  { id: "tasks", icon: CheckSquare, color: "text-teal-500" },
+  { id: "calendar", icon: Calendar, color: "text-cyan-500" },
+  { id: "messages", icon: MessageSquare, color: "text-yellow-500" },
+  { id: "documents", icon: FileText, color: "text-slate-500" },
+];
 
 export default function SignUpPage() {
   const t = useTranslations("auth");
+  const nav = useTranslations("nav");
   const locale = useLocale();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,21 +47,18 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [selectedWorkspace, setSelectedWorkspace] = useState("");
-
+  const [selectedModule, setSelectedModule] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ws = params.get("workspace");
-    if (ws) setSelectedWorkspace(ws);
+    if (ws) setSelectedModule(ws);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step === 1) {
-      setStep(2);
-      return;
-    }
+    if (step === 1) { setStep(2); return; }
+    if (step === 2) { if (selectedModule) setStep(3); return; }
     setIsLoading(true);
     setError("");
     try {
@@ -58,44 +70,21 @@ export default function SignUpPage() {
 
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          firstName,
-          lastName,
-          companyName: company,
-          locale,
-          acceptedTerms,
-
-        }),
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ email, password, firstName, lastName, companyName: company, locale, acceptedTerms, selectedModule }),
       });
 
       const data = await res.json();
-
       if (!res.ok) {
-        if (data.error?.includes('already') || data.error?.includes('existe')) {
-          setError(t('accountExists'));
-        } else {
-          setError(data.error || t('serverError'));
-        }
+        if (data.error?.includes('already') || data.error?.includes('existe')) setError(t('accountExists'));
+        else setError(data.error || t('serverError'));
         return;
       }
 
-      // Redirect to email verification page
-      if (data.redirectTo) {
-        window.location.href = data.redirectTo;
-      } else {
-        window.location.href = `/${locale}/verify-email?userId=${data.user.id}`;
-      }
-    } catch {
-      setError(t('serverError'));
-    } finally {
-      setIsLoading(false);
-    }
+      if (data.redirectTo) window.location.href = data.redirectTo;
+      else window.location.href = `/${locale}/verify-email?userId=${data.user.id}`;
+    } catch { setError(t('serverError')); }
+    finally { setIsLoading(false); }
   };
 
   const handleGoogleSignUp = async () => {
@@ -103,9 +92,7 @@ export default function SignUpPage() {
     const origin = window.location.origin;
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `${origin}/api/auth/callback`,
-      },
+      options: { redirectTo: `${origin}/api/auth/callback` },
     });
   };
 
@@ -114,23 +101,19 @@ export default function SignUpPage() {
     const origin = window.location.origin;
     await supabase.auth.signInWithOAuth({
       provider: 'github',
-      options: {
-        redirectTo: `${origin}/api/auth/callback`,
-      },
+      options: { redirectTo: `${origin}/api/auth/callback` },
     });
   };
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background p-4">
-      {/* Background decorations */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-40 -left-40 h-[500px] w-[500px] rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full bg-primary/5 blur-3xl" />
       </div>
 
-      <div className="w-full max-w-[440px] animate-fade-in-up">
-        {/* Logo */}
+      <div className="w-full max-w-[560px] animate-fade-in-up">
         <div className="flex flex-col items-center mb-8">
           <img src="/omnicore-logo.png" alt="OmniCore" className="h-14 w-14 rounded-[16px] object-contain shadow-lg mb-4" />
           <h1 className="text-2xl font-bold tracking-tight">{t("createAccount")}</h1>
@@ -139,201 +122,143 @@ export default function SignUpPage() {
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          {[1, 2].map((s) => (
+          {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-2">
-              <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-all duration-300 ${
-                  s <= step
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {s}
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-all duration-300 ${s <= step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                {s < step ? <CheckCircle className="h-4 w-4" /> : s}
               </div>
-              {s < 2 && (
-                <div
-                  className={`h-[2px] w-12 transition-all duration-300 ${
-                    step > s ? "bg-primary" : "bg-border"
-                  }`}
-                />
-              )}
+              {s < 3 && <div className={`h-[2px] w-12 transition-all duration-300 ${step > s ? "bg-primary" : "bg-border"}`} />}
             </div>
           ))}
         </div>
 
-        {/* Sign Up Card */}
         <Card className="border-border/50 shadow-xl">
           <CardContent className="p-6">
-
             <form onSubmit={handleSubmit} className="space-y-4">
-              {step === 1 ? (
+              {/* Step 1: Identity */}
+              {step === 1 && (
                 <>
-                  {/* Name Fields */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="firstName">
-                        {t("firstName")}
-                      </label>
+                      <label className="text-sm font-medium" htmlFor="firstName">{t("firstName")}</label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="firstName"
-                          placeholder="Jean"
-                          className="pl-9"
-                          value={firstName}
-                          onChange={(e) => setFirstName(e.target.value)}
-                          required
-                        />
+                        <Input id="firstName" placeholder="Jean" className="pl-9" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="lastName">
-                        {t("lastName")}
-                      </label>
+                      <label className="text-sm font-medium" htmlFor="lastName">{t("lastName")}</label>
                       <Input id="lastName" placeholder="Dupont" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
                     </div>
                   </div>
-
-                  {/* Email */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="email">
-                      {t("email")}
-                    </label>
+                    <label className="text-sm font-medium" htmlFor="email">{t("email")}</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder={t("emailPlaceholder")}
-                        className="pl-9"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
+                      <Input id="email" type="email" placeholder={t("emailPlaceholder")} className="pl-9" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     </div>
                   </div>
-
-                  {/* Company */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="company">
-                      {t("companyName")}
-                    </label>
+                    <label className="text-sm font-medium" htmlFor="company">{t("companyName")}</label>
                     <div className="relative">
                       <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="company"
-                        placeholder="Ma Société SAS"
-                        className="pl-9"
-                        value={company}
-                        onChange={(e) => setCompany(e.target.value)}
-                      />
+                      <Input id="company" placeholder="Ma Société SAS" className="pl-9" value={company} onChange={(e) => setCompany(e.target.value)} />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full h-11" loading={isLoading}>
+                    {t("continue")} <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </>
+              )}
+
+              {/* Step 2: Module Selection */}
+              {step === 2 && (
+                <>
+                  <p className="text-sm font-medium text-center text-muted-foreground mb-2">
+                    Choose your primary module to get started
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
+                    {MODULES.map((mod) => {
+                      const Icon = mod.icon;
+                      return (
+                        <button key={mod.id} type="button" onClick={() => setSelectedModule(mod.id)}
+                          className={`flex items-center gap-3 p-3 rounded-[10px] border-2 transition-all text-left ${selectedModule === mod.id ? "border-primary bg-primary/5" : "border-border/50 bg-card hover:bg-accent"}`}
+                        >
+                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] ${mod.color} bg-current/5`}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <span className="text-sm font-medium">{nav(mod.id)}</span>
+                          {selectedModule === mod.id && <CheckCircle className="h-4 w-4 ml-auto text-primary shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={() => setStep(1)} className="w-1/3 h-11">
+                      <ArrowLeft className="h-4 w-4 mr-1" /> {t("back")}
+                    </Button>
+                    <Button type="submit" className="flex-1 h-11" disabled={!selectedModule}>
+                      {t("continue")} <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {/* Step 3: Password + Terms + Submit */}
+              {step === 3 && (
+                <>
+                  <div className="rounded-[10px] bg-primary/5 border border-primary/10 p-3 flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5 text-primary shrink-0" />
+                    <div className="text-sm">
+                      <span className="font-medium">{nav(selectedModule)}</span>
+                      <button type="button" onClick={() => setStep(2)} className="ml-2 text-xs text-muted-foreground hover:text-foreground underline">Change</button>
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full h-11" loading={isLoading}>
-                    {t("continue")}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {/* Password */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="password">
-                      {t("password")}
-                    </label>
+                    <label className="text-sm font-medium" htmlFor="password">{t("password")}</label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        className="pl-9 pr-9"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                      <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" className="pl-9 pr-9" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
-
-                  {/* Confirm Password */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium" htmlFor="confirmPassword">
-                      {t("confirmPassword")}
-                    </label>
+                    <label className="text-sm font-medium" htmlFor="confirmPassword">{t("confirmPassword")}</label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-9"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                      />
+                      <Input id="confirmPassword" type="password" placeholder="••••••••" className="pl-9" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
                     </div>
                   </div>
-
-                  {/* Terms */}
                   <div className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      id="terms"
-                      checked={acceptedTerms}
-                      onChange={(e) => setAcceptedTerms(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded-[4px] border-border text-primary focus:ring-ring"
-                      required
-                    />
+                    <input type="checkbox" id="terms" checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)} className="mt-1 h-4 w-4 rounded-[4px] border-border text-primary focus:ring-ring" required />
                     <label htmlFor="terms" className="text-xs text-muted-foreground">
                       {t("acceptTerms")}{" "}
-                      <Link href="/terms" className="text-primary hover:underline">
-                        {t("termsOfService")}
-                      </Link>{" "}
+                      <Link href="/terms" className="text-primary hover:underline">{t("termsOfService")}</Link>{" "}
                       {t("and")}{" "}
-                      <Link href="/privacy" className="text-primary hover:underline">
-                        {t("privacyPolicy")}
-                      </Link>
+                      <Link href="/privacy" className="text-primary hover:underline">{t("privacyPolicy")}</Link>
                     </label>
                   </div>
 
-                  <Button
-                    type="submit"
-                    className="w-full h-11"
-                    loading={isLoading}
+                  {error && <p className="text-sm text-destructive">{error}</p>}
 
-                  >
+                  <Button type="submit" className="w-full h-11" loading={isLoading}>
                     {t("createAccount")}
                   </Button>
-
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
+                  <button type="button" onClick={() => setStep(2)} className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors">
                     {t("back")}
                   </button>
                 </>
               )}
             </form>
 
-            {/* Social Sign Up */}
+            {/* Social Login */}
             <div className="mt-6">
               <div className="relative mb-4">
                 <Separator />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                  {t("orContinueWith")}
-                </span>
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">{t("orContinueWith")}</span>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Button variant="outline" className="gap-2 h-10" onClick={handleGoogleSignUp}>
@@ -347,15 +272,9 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            {/* Login Link */}
             <p className="mt-6 text-center text-sm text-muted-foreground">
               {t("hasAccount")}{" "}
-              <Link
-                href="/login"
-                className="font-medium text-primary hover:text-primary/80 transition-colors"
-              >
-                {t("signIn")}
-              </Link>
+              <Link href="/login" className="font-medium text-primary hover:text-primary/80 transition-colors">{t("signIn")}</Link>
             </p>
           </CardContent>
         </Card>
