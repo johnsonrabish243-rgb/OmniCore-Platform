@@ -114,7 +114,7 @@ function normWords(text: string): string[] {
   return n.split(/\s+/).filter(Boolean);
 }
 
-function detectLanguage(text: string, preferredLocale?: string): "fr" | "en" | "sw" {
+function detectLanguage(text: string, preferredLocale: string = "fr"): "fr" | "en" | "sw" {
   const swWords = ["habari", "msaada", "tafadhali", "asante", "sawa", "ndiyo", "hapana", "mfanyakazi", "mwanafunzi", "mgonjwa", "dawa", "hesabu", "ankara", "bidhaa", "agizo", "hisa", "kozi", "darasa", "mwalimu", "ratiba", "kazi", "mkutano", "ripoti", "taarifa", "nyaraka", "malipo", "wafanyakazi", "wanafunzi", "wagonjwa", "biashara", "fedha", "afya", "elimu", "famasia", "miradi", "mipangilio", "wasifu"];
   const frWords = ["bonjour", "merci", "svp", "aide", "employe", "facture", "client", "produit", "commande", "stock", "medicament", "patient", "rdv", "eleve", "professeur", "cours", "classe", "projet", "tache", "calendrier", "parametres", "profil", "espace", "tableau", "comment", "pourquoi", "confidentialite", "entreprise", "societe", "mission", "vision", "equipe", "logo", "contact", "politique", "conditions", "cookies", "droits", "veuillez", "donnees", "protection"];
   const enWords = ["hello", "help", "please", "thank", "how", "what", "why", "where", "when", "employee", "invoice", "customer", "product", "order", "dashboard", "settings", "profile", "workspace", "project", "privacy", "policy", "data", "protection", "cookie", "about", "company", "mission", "vision", "team", "founder", "logo", "brand", "contact", "information", "terms", "rights", "access", "delete", "personal", "export", "file", "report", "error", "issue", "solution", "feature", "module"];
@@ -125,11 +125,9 @@ function detectLanguage(text: string, preferredLocale?: string): "fr" | "en" | "
   let frScore = frWords.filter(w => n.includes(w)).length;
   let enScore = enWords.filter(w => n.includes(w)).length;
 
-  if (preferredLocale === "sw" && swScore >= frScore && swScore >= enScore) return "sw";
-  if (preferredLocale === "fr" && frScore >= swScore) return "fr";
-  if (preferredLocale === "en" && enScore >= frScore) return "en";
-
-  if (swScore > frScore && swScore > enScore) return "sw";
+  if (preferredLocale === "sw") return "sw";
+  if (preferredLocale === "fr") return "fr";
+  if (preferredLocale === "en") return "en";
   if (frScore >= enScore) return "fr";
   return "en";
 }
