@@ -37,11 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const t = await getTranslations({ locale, namespace: "app" });
 
   const title = `${t("name")} | ${t("tagline")}`;
-  const description = locale === "fr" 
-    ? "OmniCore est une plateforme ERP cloud moderne basée à Kalemie, Tanganyika, RDC. Gérez RH, Finance, Commerce, Pharmacie, Éducation et plus."
-    : locale === "sw"
-    ? "OmniCore ni jukwaa la kisasa la ERP linalotokana na Kalemie, Tanganyika, DRC. Simamia HR, Fedha, Biashara, Dawa, Elimu na zaidi."
-    : "OmniCore is a modern cloud ERP platform based in Kalemie, Tanganyika, DRC. Manage HR, Finance, Commerce, Pharmacy, Education and more.";
+  const description = t("description");
 
   return {
     title,

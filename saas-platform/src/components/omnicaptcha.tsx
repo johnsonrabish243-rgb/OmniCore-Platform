@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Loader2, Shield, RefreshCw, CheckCircle, XCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -16,46 +16,52 @@ interface CaptchaData {
 interface OmniCaptchaProps {
   onVerify: (verified: boolean, token?: string) => void;
   className?: string;
+  invisible?: boolean;
+  id?: string;
 }
 
-/**
- * OmniCaptcha — Proprietary, self-hosted captcha component.
- * Generates math-based challenges and verifies them server-side.
- * No third-party tracking, no cookies, fully private.
- */
-export function OmniCaptcha({ onVerify, className }: OmniCaptchaProps) {
+export function OmniCaptcha({ onVerify, className, invisible, id }: OmniCaptchaProps) {
   const t = useTranslations("omniCaptcha");
+  const locale = useLocale();
   const [captcha, setCaptcha] = useState<CaptchaData | null>(null);
   const [answer, setAnswer] = useState("");
   const [status, setStatus] = useState<"loading" | "ready" | "verifying" | "valid" | "invalid">("loading");
   const [error, setError] = useState("");
+  const verifiedRef = useRef(false);
 
   const generateChallenge = useCallback(async () => {
     setStatus("loading");
     setAnswer("");
     setError("");
+    verifiedRef.current = false;
     try {
       const res = await fetch("/api/captcha/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "math" }),
+        body: JSON.stringify({ type: "math", locale }),
       });
       if (!res.ok) throw new Error("Failed to generate captcha");
       const data = await res.json();
       setCaptcha(data);
-      setStatus("ready");
+      if (invisible) {
+        setStatus("valid");
+        onVerify(true, data.token);
+        verifiedRef.current = true;
+      } else {
+        setStatus("ready");
+      }
     } catch {
       setError(t("loadError"));
       setStatus("invalid");
     }
-  }, [t]);
+  }, [t, locale, invisible, onVerify]);
 
   useEffect(() => {
     generateChallenge();
   }, [generateChallenge]);
 
   const handleVerify = async () => {
-    if (!captcha || !answer.trim()) return;
+    if (!captcha || !answer.trim() || verifiedRef.current) return;
     setStatus("verifying");
     setError("");
     try {
@@ -67,12 +73,12 @@ export function OmniCaptcha({ onVerify, className }: OmniCaptchaProps) {
       const result = await res.json();
       if (result.valid) {
         setStatus("valid");
+        verifiedRef.current = true;
         onVerify(true, captcha.token);
       } else {
         setStatus("invalid");
         setError(t("incorrect"));
         onVerify(false);
-        // Auto-regenerate after incorrect attempt
         setTimeout(() => generateChallenge(), 1500);
       }
     } catch {
@@ -89,17 +95,35 @@ export function OmniCaptcha({ onVerify, className }: OmniCaptchaProps) {
     }
   };
 
+  if (invisible && (status === "valid" || verifiedRef.current)) {
+    return null;
+  }
+
+  if (invisible) {
+    return (
+      <div id={id} className={cn("flex items-center gap-2", className)}>
+        {status === "loading" && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        {status === "invalid" && (
+          <button
+            type="button"
+            onClick={generateChallenge}
+            className="text-xs text-destructive hover:underline"
+          >
+            {error || t("loadError")}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("rounded-[12px] border border-border/50 bg-muted/30 p-4 space-y-3", className)}>
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded-[6px] bg-primary/10 text-primary">
             <Shield className="h-3.5 w-3.5" />
           </div>
-          <span className="text-xs font-medium text-muted-foreground">
-            {t("title")}
-          </span>
+          <span className="text-xs font-medium text-muted-foreground">{t("title")}</span>
         </div>
         {status === "ready" && (
           <button
@@ -112,7 +136,6 @@ export function OmniCaptcha({ onVerify, className }: OmniCaptchaProps) {
         )}
       </div>
 
-      {/* Challenge */}
       {status === "loading" && (
         <div className="flex items-center justify-center py-4">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -128,12 +151,10 @@ export function OmniCaptcha({ onVerify, className }: OmniCaptchaProps) {
 
       {(status === "ready" || status === "invalid" || status === "verifying") && captcha && (
         <>
-          {/* Question */}
           <div className="bg-card rounded-[10px] border border-border/40 px-4 py-3 text-center">
             <p className="text-base font-semibold tracking-tight">{captcha.question}</p>
           </div>
 
-          {/* Answer Input */}
           <div className="flex items-center gap-2">
             <Input
               type="text"
@@ -161,7 +182,6 @@ export function OmniCaptcha({ onVerify, className }: OmniCaptchaProps) {
             </Button>
           </div>
 
-          {/* Error */}
           {error && (
             <div className="flex items-center gap-1.5 text-xs text-destructive">
               <XCircle className="h-3.5 w-3.5" />
@@ -171,10 +191,7 @@ export function OmniCaptcha({ onVerify, className }: OmniCaptchaProps) {
         </>
       )}
 
-      {/* Footer */}
-      <p className="text-[10px] text-muted-foreground/50 text-center">
-        {t("footer")}
-      </p>
+      <p className="text-[10px] text-muted-foreground/50 text-center">{t("footer")}</p>
     </div>
   );
 }

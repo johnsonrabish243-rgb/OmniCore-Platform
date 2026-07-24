@@ -21,8 +21,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const { type } = await request.json().catch(() => ({}));
-    const challenge = generateChallenge(type || "math");
+    const { type, locale } = await request.json().catch(() => ({}));
+    const challenge = generateChallenge(type || "math", locale || "fr");
 
     return NextResponse.json({
       id: challenge.id,

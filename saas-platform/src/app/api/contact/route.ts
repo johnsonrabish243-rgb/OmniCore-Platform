@@ -1,89 +1,45 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limiter";
+import { validateCSRFRequest } from "@/lib/csrf";
+import { verifyChallenge } from "@/lib/omnicaptcha";
 
-export const dynamic = "force-dynamic";
-
-interface ContactFormData {
-  fullName: string;
-  companyName: string;
-  email: string;
-  phone: string;
-  country: string;
-  organizationType: string;
-  interestedModule: string;
-  preferredDate: string;
-  preferredTime: string;
-  meetingType: string;
-  reasonForAppointment: string;
-  message: string;
-}
-
-function validateEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function buildAdminEmailBody(data: ContactFormData): string {
-  const meetingTypeLabel: Record<string, string> = {
-    "online": "En ligne (Visioconférence)",
-    "in-person": "En personne",
-    "phone": "Par téléphone",
-  };
-  const moduleLabel: Record<string, string> = {
-    "hr": "Ressources Humaines",
-    "finance": "Finance & Comptabilité",
-    "healthcare": "Santé & Pharmacie",
-    "education": "Éducation",
-    "commerce": "Commerce & Inventaire",
-    "multiple": "Plusieurs modules",
-    "general": "Information générale",
-  };
-
-  return `
-Nouvelle demande de rendez-vous OmniCore
-==========================================
-
-INFORMATIONS DU VISITEUR
--------------------------
-Nom complet     : ${data.fullName}
-Entreprise      : ${data.companyName || "Non spécifié"}
-Email           : ${data.email}
-Téléphone       : ${data.phone || "Non spécifié"}
-Pays            : ${data.country || "Non spécifié"}
-Type organisation: ${data.organizationType || "Non spécifié"}
-
-DÉTAILS DU RENDEZ-VOUS
------------------------
-Module感兴趣    : ${moduleLabel[data.interestedModule] || data.interestedModule || "Non spécifié"}
-Type de réunion : ${meetingTypeLabel[data.meetingType] || data.meetingType || "Non spécifié"}
-Date souhaitée  : ${data.preferredDate || "Non spécifié"}
-Heure souhaitée : ${data.preferredTime || "Non spécifié"}
-Raison          : ${data.reasonForAppointment || "Non spécifié"}
-
-MESSAGE
--------
-${data.message || "Aucun message complémentaire"}
-
----
-Cet email a été généré automatiquement par le formulaire de contact OmniCore.
-`.trim();
-}
+const VALID_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
   try {
-    const body: ContactFormData = await request.json();
+    if (!validateCSRFRequest(request)) {
+      return NextResponse.json({ error: "Requête invalide" }, { status: 403 });
+    }
 
-    // Validate required fields
+    const clientId = getClientIdentifier(request);
+    const rateLimit = await checkRateLimit("contact", clientId);
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Trop de tentatives. Réessayez plus tard." }, { status: 429 });
+    }
+
+    const body = await request.json();
+
+    if (!body.email?.trim() || !VALID_EMAIL.test(body.email)) {
+      return NextResponse.json({ error: "Une adresse email valide est requise." }, { status: 400 });
+    }
     if (!body.fullName?.trim()) {
       return NextResponse.json({ error: "Le nom complet est requis." }, { status: 400 });
     }
-    if (!body.email?.trim() || !validateEmail(body.email)) {
-      return NextResponse.json({ error: "Une adresse email valide est requise." }, { status: 400 });
+
+    if (body.fullName.length > 200 || (body.message && body.message.length > 5000)) {
+      return NextResponse.json({ error: "Données invalides" }, { status: 400 });
     }
 
-    // Store the contact request in Supabase
+    if (body.captchaToken) {
+      const captchaResult = verifyChallenge(body.captchaToken, body.captchaAnswer || "");
+      if (!captchaResult.valid) {
+        return NextResponse.json({ error: "Vérification de sécurité échouée." }, { status: 403 });
+      }
+    }
+
     const supabase = await createClient();
 
-    // Try to insert into a contact_requests table if it exists
     try {
       const { error: insertError } = await supabase
         .from("contact_requests")
@@ -104,20 +60,17 @@ export async function POST(request: Request) {
         });
 
       if (insertError) {
-        // Table might not exist - log but don't fail
-        console.warn("Could not insert contact_request (table may not exist)");
+        console.warn("Could not insert contact_request:", insertError.message);
       }
     } catch (e) {
       console.warn("contact_requests table not found, skipping DB insert");
     }
 
-    // Send notification email to admin
     const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_FROM || "contact@omnicore.site";
-    const emailBody = buildAdminEmailBody(body);
+    const subject = `[OmniCore] Nouveau message de ${body.fullName}`;
+    const text = `Nouveau message de ${body.fullName} (${body.email}):\n\n${body.message || "Pas de message"}`;
 
-    // Try to send email via SMTP or Resend if configured
     try {
-      // Option 1: Resend API
       if (process.env.RESEND_API_KEY) {
         await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -128,32 +81,21 @@ export async function POST(request: Request) {
           body: JSON.stringify({
             from: process.env.SMTP_FROM || "OmniCore <noreply@omnicore.site>",
             to: [adminEmail],
-            subject: `[OmniCore] Nouvelle demande de rendez-vous de ${body.fullName}`,
-            text: emailBody,
+            subject,
+            text,
             reply_to: body.email,
           }),
         });
-      }
-      // Option 2: SMTP via nodemailer-like fetch (if configured)
-      else if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-        // Use a simple SMTP approach via API
-        console.log("SMTP configured but direct sending not implemented - email body logged:", emailBody.substring(0, 200));
       } else {
-        // No email service configured - log the email content
-        console.log("=== CONTACT FORM SUBMISSION ===");
-        console.log("To:", adminEmail);
-        console.log("Subject:", `[OmniCore] Nouvelle demande de rendez-vous de ${body.fullName}`);
-        console.log(emailBody);
-        console.log("===============================");
+        console.log("Contact form submission:", subject, text.substring(0, 200));
       }
     } catch (emailError) {
       console.error("Failed to send notification email");
-      // Don't fail the request if email fails
     }
 
     return NextResponse.json({
       success: true,
-      message: "Votre demande a été envoyée avec succès. Nous vous contacterons bientôt.",
+      message: "Votre message a été envoyé avec succès. Nous vous contacterons bientôt.",
     });
   } catch (error) {
     console.error("Contact form error");

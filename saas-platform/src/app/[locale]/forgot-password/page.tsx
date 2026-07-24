@@ -6,6 +6,8 @@ import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { OmniCaptcha } from "@/components/omnicaptcha";
+import { getCSRFHeaders } from "@/lib/csrf";
 import { Mail, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 
 export default function ForgotPasswordPage() {
@@ -14,19 +16,23 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [captchaVerified, setCaptchaVerified] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
+    if (!captchaVerified) {
+      setError(t("captchaRequired"));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-        },
+        headers: { ...getCSRFHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
@@ -52,17 +58,17 @@ export default function ForgotPasswordPage() {
               <CheckCircle className="h-8 w-8 text-emerald-500" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight mb-2">Email envoyé !</h1>
+          <h1 className="text-2xl font-bold tracking-tight mb-2">{t("emailSent")}</h1>
           <p className="text-muted-foreground mb-6">
-            Si un compte existe avec l'adresse <strong>{email}</strong>, vous recevrez un lien de réinitialisation dans votre boîte de réception.
+            {t("resetEmailSent")} <strong>{email}</strong>.
           </p>
           <p className="text-xs text-muted-foreground mb-6">
-            Vérifiez également vos spams si vous ne trouvez pas l'email.
+            {t("checkSpam")}
           </p>
           <Link href="/login">
             <Button variant="outline" className="gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Retour à la connexion
+              {t("backToLogin")}
             </Button>
           </Link>
         </div>
@@ -106,6 +112,11 @@ export default function ForgotPasswordPage() {
                   />
                 </div>
               </div>
+
+              <OmniCaptcha
+                onVerify={(verified) => setCaptchaVerified(verified)}
+                invisible
+              />
 
               {error && (
                 <p className="text-sm text-destructive">{error}</p>

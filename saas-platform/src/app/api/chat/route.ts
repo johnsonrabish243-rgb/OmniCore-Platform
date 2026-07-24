@@ -387,11 +387,21 @@ function getResponse(message: string, lang: "fr" | "en" | "sw", previousMessages
   }
 
   if (/\b(merci|asante|thank|thanks|merci|shukran|merci beaucoup)\b/.test(lower)) {
-    return `De rien ! Je suis là pour vous aider. N'hésitez pas si vous avez d'autres questions.`;
+    const thankResponses: ResponseMap = {
+      fr: "De rien ! Je suis là pour vous aider. N'hésitez pas si vous avez d'autres questions.",
+      en: "You're welcome! I'm here to help. Feel free to ask if you have more questions.",
+      sw: "Karibu sana! Niko hapa kukusaidia. Usisite kuuliza kama una maswali zaidi.",
+    };
+    return thankResponses[lang];
   }
 
   if (/\b(au revoir|bye|goodbye|kwa heri|a plus|tchao|see you|baadaye|a toute)\b/.test(lower)) {
-    return `Au revoir ! N'hésitez pas à revenir si vous avez besoin d'aide. Bonne journée !`;
+    const goodbyeResponses: ResponseMap = {
+      fr: "Au revoir ! N'hésitez pas à revenir si vous avez besoin d'aide. Bonne journée !",
+      en: "Goodbye! Feel free to come back if you need help. Have a great day!",
+      sw: "Kwa heri! Usisite kurudi ukitaka msaada. Siku njema!",
+    };
+    return goodbyeResponses[lang];
   }
 
   if (/\b(help|aide|msaada|assist|soutenir|aider|kusaidia|peux.tu|can.you|unaweza)$\b/.test(lower) && !n.includes("export") && !n.includes("probleme")) {

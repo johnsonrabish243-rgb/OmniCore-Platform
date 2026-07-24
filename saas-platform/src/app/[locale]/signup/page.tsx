@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
 
 export default function SignUpPage() {
   const t = useTranslations("auth");
+  const locale = useLocale();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -30,6 +31,7 @@ export default function SignUpPage() {
   const [company, setCompany] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [selectedWorkspace, setSelectedWorkspace] = useState("");
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | undefined>();
@@ -61,8 +63,6 @@ export default function SignUpPage() {
         return;
       }
 
-      // Step 1: Create auth user via server API (handles auto-confirm)
-      // The server API uses admin client to auto-confirm and create session
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
@@ -75,7 +75,8 @@ export default function SignUpPage() {
           firstName,
           lastName,
           companyName: company,
-          workspace: selectedWorkspace,
+          locale,
+          acceptedTerms,
         }),
       });
 
@@ -90,9 +91,12 @@ export default function SignUpPage() {
         return;
       }
 
-      // Auto-confirmed: redirect directly to dashboard
-      const locale = window.location.pathname.split('/')[1] || 'fr';
-      window.location.href = `/${locale}/dashboard`;
+      // Redirect to email verification page
+      if (data.redirectTo) {
+        window.location.href = data.redirectTo;
+      } else {
+        window.location.href = `/${locale}/verify-email?userId=${data.user.id}`;
+      }
     } catch {
       setError(t('serverError'));
     } finally {
@@ -292,6 +296,8 @@ export default function SignUpPage() {
                     <input
                       type="checkbox"
                       id="terms"
+                      checked={acceptedTerms}
+                      onChange={(e) => setAcceptedTerms(e.target.checked)}
                       className="mt-1 h-4 w-4 rounded-[4px] border-border text-primary focus:ring-ring"
                       required
                     />

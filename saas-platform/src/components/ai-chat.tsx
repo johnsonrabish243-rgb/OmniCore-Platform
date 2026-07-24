@@ -33,11 +33,20 @@ interface AIChatProps {
   position?: "bottom-right" | "bottom-left";
 }
 
-function getGreeting(firstName?: string): string {
-  if (firstName) {
-    return `Bonjour ${firstName} ! 👋 Je suis OmniCore AI, votre assistant intelligent. Comment puis-je vous aider aujourd'hui ?`;
+function getGreeting(locale: string, firstName?: string): string {
+  if (locale === "en") {
+    return firstName
+      ? `Hello ${firstName}! 👋 I'm OmniCore AI, your intelligent assistant. How can I help you today?`
+      : `Hello! 👋 I'm OmniCore AI, your intelligent assistant. How can I help you today?`;
   }
-  return `Bonjour ! 👋 Je suis OmniCore AI, votre assistant intelligent. Comment puis-je vous aider aujourd'hui ?`;
+  if (locale === "sw") {
+    return firstName
+      ? `Habari ${firstName}! 👋 Mimi ni OmniCore AI, msaidizi wako mahiri. Nikusaidie vipi leo?`
+      : `Habari! 👋 Mimi ni OmniCore AI, msaidizi wako mahiri. Nikusaidie vipi leo?`;
+  }
+  return firstName
+    ? `Bonjour ${firstName} ! 👋 Je suis OmniCore AI, votre assistant intelligent. Comment puis-je vous aider aujourd'hui ?`
+    : `Bonjour ! 👋 Je suis OmniCore AI, votre assistant intelligent. Comment puis-je vous aider aujourd'hui ?`;
 }
 
 export function AIChat({
@@ -70,13 +79,13 @@ export function AIChat({
           setMessages([{
             id: "welcome",
             role: "assistant",
-            content: getGreeting(data.user.firstName),
+            content: getGreeting(locale, data.user.firstName),
           }]);
         } else {
           setMessages([{
             id: "welcome",
             role: "assistant",
-            content: t("welcomeMessage"),
+            content: getGreeting(locale),
           }]);
         }
       })
@@ -84,7 +93,7 @@ export function AIChat({
         setMessages([{
           id: "welcome",
           role: "assistant",
-          content: t("welcomeMessage"),
+          content: getGreeting(locale),
         }]);
       });
   }, []);

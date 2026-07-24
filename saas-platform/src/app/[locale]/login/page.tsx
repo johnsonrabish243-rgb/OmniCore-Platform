@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { createClient } from "@/lib/supabase/client";
+import { OmniCaptcha } from "@/components/omnicaptcha";
+import { getCSRFHeaders } from "@/lib/csrf";
 import {
   Mail,
   Lock,
@@ -17,6 +19,7 @@ import {
 
 export default function LoginPage() {
   const t = useTranslations("auth");
+  const locale = useLocale();
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,69 +27,74 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [captchaVerified, setCaptchaVerified] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("message") === "account_created") {
       setSuccessMessage(t("accountCreated"));
-      // Clean up the URL
-      window.history.replaceState({}, '', window.location.pathname);
+      window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
-
-  const supabase = createClient();
+    if (params.get("message") === "email_verified") {
+      setSuccessMessage(t("emailVerified"));
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+
+    if (!captchaVerified) {
+      setError(t("captchaRequired"));
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // Use the browser client directly — InsForge SDK handles cookies automatically
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { ...getCSRFHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, locale }),
       });
 
-      if (signInError) {
-        console.error('Login error:', signInError.message);
-        setError(t('invalidCredentials'));
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || t("invalidCredentials"));
         return;
       }
 
-      // Redirect to dashboard (will check for workspace)
-      const locale = window.location.pathname.split('/')[1] || 'fr';
       window.location.href = `/${locale}/dashboard`;
     } catch (err) {
-      console.error('Login error:', err);
-      setError(t('loginError'));
+      console.error("Login error:", err);
+      setError(t("loginError"));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    const supabase = createClient();
     const origin = window.location.origin;
     await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${origin}/api/auth/callback`,
-      },
+      provider: "google",
+      options: { redirectTo: `${origin}/api/auth/callback` },
     });
   };
 
   const handleGitHubLogin = async () => {
+    const supabase = createClient();
     const origin = window.location.origin;
     await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: {
-        redirectTo: `${origin}/api/auth/callback`,
-      },
+      provider: "github",
+      options: { redirectTo: `${origin}/api/auth/callback` },
     });
   };
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background p-4">
-      {/* Background decorations */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-primary/5 blur-3xl" />
         <div className="absolute -bottom-40 -left-40 h-[500px] w-[500px] rounded-full bg-primary/10 blur-3xl" />
@@ -94,18 +102,15 @@ export default function LoginPage() {
       </div>
 
       <div className="w-full max-w-[440px] animate-fade-in-up">
-        {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <img src="/omnicore-logo.png" alt="OmniCore" className="h-14 w-14 rounded-[16px] object-contain shadow-lg mb-4" />
           <h1 className="text-2xl font-bold tracking-tight">{t("welcome")}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t("subtitle")}</p>
         </div>
 
-        {/* Login Card */}
         <Card className="border-border/50 shadow-xl">
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Email */}
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="email">
                   {t("email")}
@@ -124,7 +129,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Password */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium" htmlFor="password">
@@ -153,14 +157,15 @@ export default function LoginPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
+
+              <OmniCaptcha
+                onVerify={(verified) => setCaptchaVerified(verified)}
+                invisible
+              />
 
               {successMessage && (
                 <div className="rounded-[10px] bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">
@@ -174,17 +179,11 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Submit */}
-              <Button
-                type="submit"
-                className="w-full h-11"
-                loading={isLoading}
-              >
+              <Button type="submit" className="w-full h-11" loading={isLoading}>
                 {t("signIn")}
               </Button>
             </form>
 
-            {/* Social Login */}
             <div className="mt-6">
               <div className="relative mb-4">
                 <Separator />
@@ -204,25 +203,17 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Sign Up Link */}
             <p className="mt-6 text-center text-sm text-muted-foreground">
               {t("noAccount")}{" "}
-              <Link
-                href="/signup"
-                className="font-medium text-primary hover:text-primary/80 transition-colors"
-              >
+              <Link href="/signup" className="font-medium text-primary hover:text-primary/80 transition-colors">
                 {t("signUp")}
               </Link>
             </p>
           </CardContent>
         </Card>
 
-        {/* Magic Link */}
         <div className="mt-4 text-center">
-          <Link
-            href="/magic-link"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <Link href="/magic-link" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
             {t("sendMagicLink")}
           </Link>
         </div>
