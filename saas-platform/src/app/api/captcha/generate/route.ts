@@ -21,11 +21,12 @@ export async function POST(request: Request) {
       id: challenge.id,
       type: challenge.type,
       question: challenge.question,
+      data: challenge.data,
       token: challenge.token,
     });
   } catch {
     return NextResponse.json(
-      { error: "Failed to generate captcha challenge." },
+      { error: "Failed to generate captcha." },
       { status: 500 }
     );
   }
